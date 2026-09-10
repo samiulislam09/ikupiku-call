@@ -12,8 +12,11 @@ import {
 } from 'react-native';
 
 import { Colors, Theme } from '@/constants/theme';
+import { appStorage } from '@/utils/storage';
 
 export type ThemeMode = 'light' | 'dark' | 'system';
+
+const THEME_STORAGE_KEY = 'ilubilu_theme_mode';
 
 interface ThemeContextType {
   themeMode: ThemeMode;
@@ -28,7 +31,12 @@ const ThemeContext = createContext<ThemeContextType | null>(null);
 
 export function ThemeProviderCustom({ children }: { children: React.ReactNode }) {
   const systemScheme = useRNColorScheme();
-  const [themeMode, setThemeModeState] = useState<ThemeMode>('system');
+  const [themeMode, setThemeModeState] = useState<ThemeMode>(() => {
+    const saved = appStorage.getItem(THEME_STORAGE_KEY) as ThemeMode | null;
+    return saved && (saved === 'light' || saved === 'dark' || saved === 'system')
+      ? saved
+      : 'system';
+  });
 
   const colorScheme: 'light' | 'dark' =
     themeMode === 'system'
@@ -41,6 +49,7 @@ export function ThemeProviderCustom({ children }: { children: React.ReactNode })
 
   const setThemeMode = useCallback((mode: ThemeMode) => {
     setThemeModeState(mode);
+    appStorage.setItem(THEME_STORAGE_KEY, mode);
     try {
       if (Platform.OS !== 'web') {
         Appearance.setColorScheme(mode === 'system' ? 'unspecified' : mode);

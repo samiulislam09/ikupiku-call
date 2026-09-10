@@ -33,7 +33,8 @@ export type IconName =
   | 'user-plus'
   | 'waveform'
   | 'video-off'
-  | 'volume-off';
+  | 'volume-off'
+  | 'check';
 
 interface AppIconProps {
   name: IconName;
@@ -197,6 +198,11 @@ const ICON_MAP: Record<IconName, { ios: SFSymbol; android: AndroidSymbol; web: A
     ios: 'speaker.slash.fill',
     android: 'volume_off',
     web: 'volume_off',
+  },
+  check: {
+    ios: 'checkmark',
+    android: 'check',
+    web: 'check',
   },
 };
 

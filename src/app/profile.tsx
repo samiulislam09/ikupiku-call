@@ -18,17 +18,36 @@ import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useCall } from '@/context/call-context';
 import { ThemeMode, useThemeContext } from '@/context/theme-context';
 import { useTheme } from '@/hooks/use-theme';
+import { appStorage } from '@/utils/storage';
 
 export default function ProfileScreen() {
   const theme = useTheme();
   const { isDark, themeMode, setThemeMode } = useThemeContext();
   const { receiveIncomingCall } = useCall();
 
-  // Mock toggle states for design preview
-  const [hdVoice, setHdVoice] = useState(true);
-  const [wifiCalling, setWifiCalling] = useState(true);
-  const [spamBlocker, setSpamBlocker] = useState(true);
-  const [callWaiting, setCallWaiting] = useState(false);
+  // Persisted toggle states in localStorage
+  const [hdVoice, setHdVoiceState] = useState(() =>
+    appStorage.getJSON('ilubilu_setting_hd_voice', true)
+  );
+  const [spamBlocker, setSpamBlockerState] = useState(() =>
+    appStorage.getJSON('ilubilu_setting_spam_blocker', true)
+  );
+  const [callWaiting, setCallWaitingState] = useState(() =>
+    appStorage.getJSON('ilubilu_setting_call_waiting', false)
+  );
+
+  const setHdVoice = (val: boolean) => {
+    setHdVoiceState(val);
+    appStorage.setJSON('ilubilu_setting_hd_voice', val);
+  };
+  const setSpamBlocker = (val: boolean) => {
+    setSpamBlockerState(val);
+    appStorage.setJSON('ilubilu_setting_spam_blocker', val);
+  };
+  const setCallWaiting = (val: boolean) => {
+    setCallWaitingState(val);
+    appStorage.setJSON('ilubilu_setting_call_waiting', val);
+  };
 
   const themeOptions: { label: string; mode: ThemeMode; icon: 'sun' | 'moon' | 'palette' }[] = [
     { label: 'System', mode: 'system', icon: 'palette' },
@@ -364,35 +383,6 @@ export default function ProfileScreen() {
                 styles.groupCard,
                 { backgroundColor: theme.card, borderColor: theme.border },
               ]}>
-              {/* Wi-Fi Calling */}
-              <View style={styles.rowItem}>
-                <View style={styles.rowLeft}>
-                  <View
-                    style={[
-                      styles.iconBox,
-                      { backgroundColor: theme.primary + '18' },
-                    ]}>
-                    <AppIcon name="phone" size={18} color={theme.primary} />
-                  </View>
-                  <View style={styles.rowTexts}>
-                    <ThemedText type="default" style={styles.rowTitle}>
-                      Wi-Fi Calling
-                    </ThemedText>
-                    <ThemedText type="small" themeColor="textSecondary">
-                      Make calls over local Wi-Fi networks
-                    </ThemedText>
-                  </View>
-                </View>
-                <Switch
-                  value={wifiCalling}
-                  onValueChange={setWifiCalling}
-                  trackColor={{ false: theme.border, true: theme.callGreen }}
-                  thumbColor="#FFFFFF"
-                />
-              </View>
-
-              <View style={[styles.divider, { backgroundColor: theme.border }]} />
-
               {/* Call Waiting */}
               <View style={styles.rowItem}>
                 <View style={styles.rowLeft}>

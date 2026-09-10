@@ -36,7 +36,6 @@ export function CallingModal() {
     isMuted,
     isSpeakerOn,
     isOnHold,
-    isVideoOn,
     isInCallKeypadOpen,
     isMinimized,
     acceptCall,
@@ -45,7 +44,6 @@ export function CallingModal() {
     toggleMute,
     toggleSpeaker,
     toggleHold,
-    toggleVideo,
     toggleKeypad,
     setIsMinimized,
   } = useCall();
@@ -451,12 +449,11 @@ export function CallingModal() {
                     onPress={() => {}}
                   />
 
-                  {/* Video */}
+                  {/* Contacts */}
                   <InCallButton
-                    icon={isVideoOn ? 'video' : 'video-off'}
-                    label="Video"
-                    active={isVideoOn}
-                    onPress={toggleVideo}
+                    icon="contacts"
+                    label="Contacts"
+                    onPress={() => {}}
                   />
 
                   {/* Hold */}

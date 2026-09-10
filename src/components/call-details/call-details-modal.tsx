@@ -182,22 +182,6 @@ export function CallDetailsModal({ call, visible, onClose }: CallDetailsModalPro
                   </ThemedText>
                 </View>
 
-                {/* Video Call */}
-                <View style={styles.actionItem}>
-                  <SpringPressable
-                    scaleTo={0.9}
-                    onPress={() => {}}
-                    style={[
-                      styles.actionCircleBtn,
-                      { backgroundColor: theme.primary },
-                    ]}>
-                    <AppIcon name="video" size={22} color="#FFFFFF" />
-                  </SpringPressable>
-                  <ThemedText type="smallBold" style={styles.actionLabel}>
-                    Video
-                  </ThemedText>
-                </View>
-
                 {/* Message */}
                 <View style={styles.actionItem}>
                   <SpringPressable
@@ -326,7 +310,7 @@ export function CallDetailsModal({ call, visible, onClose }: CallDetailsModalPro
                       </ThemedText>
                     </View>
                     <ThemedText type="small" themeColor="textSecondary">
-                      Duration: 1m 20s • Wi-Fi Calling
+                      Duration: 1m 20s • Cellular Voice
                     </ThemedText>
                   </View>
                 </View>

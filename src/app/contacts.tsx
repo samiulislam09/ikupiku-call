@@ -10,6 +10,7 @@ import {
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { ContactDetailsModal, type Contact } from '@/components/contacts/contact-details-modal';
 import { FloatingKeypadButton } from '@/components/keypad/floating-keypad-button';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -18,15 +19,7 @@ import { SpringPressable } from '@/components/ui/spring-pressable';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useCall } from '@/context/call-context';
 import { useTheme } from '@/hooks/use-theme';
-
-interface Contact {
-  id: string;
-  name: string;
-  phone: string;
-  label: string;
-  avatarColor: string;
-  isFavorite?: boolean;
-}
+import { appStorage } from '@/utils/storage';
 
 const MOCK_CONTACTS: Contact[] = [
   {
@@ -133,24 +126,59 @@ export default function ContactsScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
 
+  // Persisted contacts state in localStorage
+  const [contacts, setContacts] = useState<Contact[]>(() =>
+    appStorage.getJSON('ilubilu_contacts', MOCK_CONTACTS)
+  );
+  const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
+
+  const handleSaveContact = (updated: Contact) => {
+    setContacts((prev) => {
+      const exists = prev.some((c) => c.id === updated.id);
+      const next = exists
+        ? prev.map((c) => (c.id === updated.id ? updated : c))
+        : [updated, ...prev];
+      appStorage.setJSON('ilubilu_contacts', next);
+      return next;
+    });
+    setSelectedContact(updated);
+  };
+
+  const handleDeleteContact = (id: string) => {
+    setContacts((prev) => {
+      const next = prev.filter((c) => c.id !== id);
+      appStorage.setJSON('ilubilu_contacts', next);
+      return next;
+    });
+    setSelectedContact(null);
+  };
+
+  const handleAddNewContact = () => {
+    const newContact: Contact = {
+      id: 'c_' + Date.now(),
+      name: '',
+      phone: '+1 ',
+      label: 'Mobile',
+      avatarColor: '#4F46E5',
+      isFavorite: false,
+    };
+    setSelectedContact(newContact);
+  };
+
   const filteredContacts = useMemo(() => {
-    if (!searchQuery.trim()) return MOCK_CONTACTS;
+    if (!searchQuery.trim()) return contacts;
     const q = searchQuery.toLowerCase();
-    return MOCK_CONTACTS.filter(
+    return contacts.filter(
       (c) => c.name.toLowerCase().includes(q) || c.phone.includes(q)
     );
-  }, [searchQuery]);
+  }, [contacts, searchQuery]);
 
   const favorites = useMemo(
-    () => MOCK_CONTACTS.filter((c) => c.isFavorite),
-    []
+    () => contacts.filter((c) => c.isFavorite),
+    [contacts]
   );
 
   const getInitials = (name: string) => {
-    const parts = name.split(' ');
-    if (parts.length >= 2) {
-      return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-    }
     return name.slice(0, 2).toUpperCase();
   };
 
@@ -163,14 +191,25 @@ export default function ContactsScreen() {
             <ThemedText type="title" style={styles.title}>
               Contacts
             </ThemedText>
-            <View
-              style={[
-                styles.badge,
-                { backgroundColor: theme.backgroundElement },
-              ]}>
-              <ThemedText type="smallBold" themeColor="primary">
-                {MOCK_CONTACTS.length} contacts
-              </ThemedText>
+            <View style={styles.headerRightActions}>
+              <View
+                style={[
+                  styles.badge,
+                  { backgroundColor: theme.backgroundElement },
+                ]}>
+                <ThemedText type="smallBold" themeColor="primary">
+                  {contacts.length} contacts
+                </ThemedText>
+              </View>
+              <SpringPressable
+                scaleTo={0.92}
+                onPress={handleAddNewContact}
+                style={[
+                  styles.addContactButton,
+                  { backgroundColor: theme.primary },
+                ]}>
+                <ThemedText style={styles.addContactButtonText}>+ New</ThemedText>
+              </SpringPressable>
             </View>
           </View>
 
@@ -285,14 +324,7 @@ export default function ContactsScreen() {
                       <SpringPressable
                         key={fav.id}
                         scaleTo={0.92}
-                        onPress={() => {
-                          startCall({
-                            name: fav.name,
-                            number: fav.phone,
-                            label: fav.label,
-                            avatarColor: fav.avatarColor,
-                          });
-                        }}
+                        onPress={() => setSelectedContact(fav)}
                         style={styles.favCard}>
                         <View
                           style={[
@@ -366,6 +398,7 @@ export default function ContactsScreen() {
 
                 <SpringPressable
                   scaleTo={0.98}
+                  onPress={() => setSelectedContact(item)}
                   style={[
                     styles.contactRow,
                     {
@@ -447,6 +480,15 @@ export default function ContactsScreen() {
           }
         />
 
+        {/* Contact Details & Edit Modal */}
+        <ContactDetailsModal
+          visible={!!selectedContact}
+          contact={selectedContact}
+          onClose={() => setSelectedContact(null)}
+          onSaveContact={handleSaveContact}
+          onDeleteContact={handleDeleteContact}
+        />
+
         {/* Floating Keypad Button */}
         <FloatingKeypadButton />
       </SafeAreaView>
@@ -485,6 +527,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
+  },
+  headerRightActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  addContactButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  addContactButtonText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
   },
   searchBar: {
     flexDirection: 'row',

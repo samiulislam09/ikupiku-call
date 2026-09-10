@@ -12,7 +12,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 interface SpringPressableProps extends PressableProps {
-  children: React.ReactNode;
+  children?: React.ReactNode;
   style?: StyleProp<ViewStyle>;
   scaleTo?: number;
 }
