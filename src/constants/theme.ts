@@ -14,17 +14,32 @@ export const Colors = {
     backgroundElement: '#F0F0F3',
     backgroundSelected: '#E0E1E6',
     textSecondary: '#60646C',
+    primary: '#2563EB',
+    callGreen: '#16A34A',
+    callRed: '#DC2626',
+    card: '#FFFFFF',
+    border: '#E4E4E7',
+    subtle: '#F4F4F5',
+    tint: '#2563EB',
   },
   dark: {
     text: '#ffffff',
-    background: '#000000',
-    backgroundElement: '#212225',
-    backgroundSelected: '#2E3135',
-    textSecondary: '#B0B4BA',
+    background: '#09090B',
+    backgroundElement: '#18181B',
+    backgroundSelected: '#27272A',
+    textSecondary: '#A1A1AA',
+    primary: '#3B82F6',
+    callGreen: '#22C55E',
+    callRed: '#EF4444',
+    card: '#18181B',
+    border: '#27272A',
+    subtle: '#27272A',
+    tint: '#3B82F6',
   },
 } as const;
 
 export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
+export type Theme = typeof Colors.light | typeof Colors.dark;
 
 export const Fonts = Platform.select({
   ios: {
