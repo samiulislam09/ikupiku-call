@@ -18,7 +18,15 @@ export type IconName =
   | 'volume'
   | 'moon'
   | 'sun'
-  | 'palette';
+  | 'palette'
+  | 'video'
+  | 'message'
+  | 'info'
+  | 'share'
+  | 'block'
+  | 'clock'
+  | 'copy'
+  | 'back';
 
 interface AppIconProps {
   name: IconName;
@@ -107,6 +115,46 @@ const ICON_MAP: Record<IconName, { ios: SFSymbol; android: AndroidSymbol; web: A
     ios: 'paintpalette.fill',
     android: 'palette',
     web: 'palette',
+  },
+  video: {
+    ios: 'video.fill',
+    android: 'videocam',
+    web: 'videocam',
+  },
+  message: {
+    ios: 'message.fill',
+    android: 'message',
+    web: 'message',
+  },
+  info: {
+    ios: 'info.circle.fill',
+    android: 'info',
+    web: 'info',
+  },
+  share: {
+    ios: 'square.and.arrow.up',
+    android: 'share',
+    web: 'share',
+  },
+  block: {
+    ios: 'nosign',
+    android: 'block',
+    web: 'block',
+  },
+  clock: {
+    ios: 'clock.fill',
+    android: 'schedule',
+    web: 'schedule',
+  },
+  copy: {
+    ios: 'doc.on.doc.fill',
+    android: 'content_copy',
+    web: 'content_copy',
+  },
+  back: {
+    ios: 'chevron.left',
+    android: 'arrow_back',
+    web: 'arrow_back',
   },
 };
 

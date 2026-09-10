@@ -10,24 +10,13 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FloatingKeypadButton } from '@/components/keypad/floating-keypad-button';
+import { CallDetailsModal, type CallRecord } from '@/components/call-details/call-details-modal';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { AppIcon } from '@/components/ui/app-icon';
 import { SpringPressable } from '@/components/ui/spring-pressable';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-
-interface CallRecord {
-  id: string;
-  name: string;
-  number: string;
-  type: 'incoming' | 'outgoing' | 'missed';
-  time: string;
-  section: 'Today' | 'Yesterday' | 'Older';
-  label: string;
-  duration?: string;
-  avatarColor: string;
-}
 
 const MOCK_CALLS: CallRecord[] = [
   {
@@ -123,6 +112,7 @@ export default function CallLogsScreen() {
   const [filter, setFilter] = useState<'all' | 'missed'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [selectedCall, setSelectedCall] = useState<CallRecord | null>(null);
 
   const filteredCalls = MOCK_CALLS.filter((call) => {
     if (filter === 'missed' && call.type !== 'missed') {
@@ -297,6 +287,7 @@ export default function CallLogsScreen() {
 
                 <SpringPressable
                   scaleTo={0.98}
+                  onPress={() => setSelectedCall(item)}
                   style={[
                     styles.callRow,
                     {
@@ -393,6 +384,13 @@ export default function CallLogsScreen() {
 
         {/* Floating Keypad Button */}
         <FloatingKeypadButton />
+
+        {/* Call Details Modal */}
+        <CallDetailsModal
+          call={selectedCall}
+          visible={!!selectedCall}
+          onClose={() => setSelectedCall(null)}
+        />
       </SafeAreaView>
     </ThemedView>
   );
