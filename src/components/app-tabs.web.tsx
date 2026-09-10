@@ -11,7 +11,6 @@ import { Pressable, StyleSheet, useColorScheme, View } from 'react-native';
 import { AppIcon, IconName } from '@/components/ui/app-icon';
 import { Colors, MaxContentWidth, Spacing } from '@/constants/theme';
 import { ThemedText } from './themed-text';
-import { ThemedView } from './themed-view';
 
 export default function AppTabs() {
   return (
@@ -44,29 +43,35 @@ export function TabButton({
   const colors = Colors[scheme === 'unspecified' ? 'light' : scheme];
 
   return (
-    <Pressable {...props} style={({ pressed }) => pressed && styles.pressed}>
-      <ThemedView
-        style={[
-          styles.tabButtonView,
-          isFocused
-            ? { backgroundColor: colors.backgroundSelected }
-            : { backgroundColor: 'transparent' },
-        ]}>
+    <Pressable
+      {...props}
+      style={({ pressed }) => [styles.tabPressable, pressed && styles.pressed]}>
+      <View style={styles.tabButtonView}>
         {icon && (
-          <AppIcon
-            name={icon}
-            size={18}
-            color={isFocused ? colors.primary : colors.textSecondary}
-          />
+          <View
+            style={[
+              styles.iconBadge,
+              isFocused && { backgroundColor: colors.primary + '18' },
+            ]}>
+            <AppIcon
+              name={icon}
+              size={22}
+              color={isFocused ? colors.primary : colors.textSecondary}
+            />
+          </View>
         )}
         <ThemedText
-          type="smallBold"
-          style={{
-            color: isFocused ? colors.primary : colors.textSecondary,
-          }}>
+          type="small"
+          style={[
+            styles.tabLabel,
+            {
+              color: isFocused ? colors.primary : colors.textSecondary,
+              fontWeight: isFocused ? '700' : '500',
+            },
+          ]}>
           {children}
         </ThemedText>
-      </ThemedView>
+      </View>
     </Pressable>
   );
 }
@@ -76,17 +81,16 @@ export function CustomTabList(props: TabListProps) {
   const colors = Colors[scheme === 'unspecified' ? 'light' : scheme];
 
   return (
-    <View {...props} style={styles.tabListContainer}>
-      <ThemedView
-        style={[
-          styles.innerContainer,
-          {
-            backgroundColor: colors.card,
-            borderColor: colors.border,
-          },
-        ]}>
-        {props.children}
-      </ThemedView>
+    <View
+      {...props}
+      style={[
+        styles.tabListContainer,
+        {
+          backgroundColor: colors.card,
+          borderTopColor: colors.border,
+        },
+      ]}>
+      <View style={styles.innerContainer}>{props.children}</View>
     </View>
   );
 }
@@ -95,33 +99,49 @@ const styles = StyleSheet.create({
   tabListContainer: {
     position: 'absolute',
     bottom: 0,
+    left: 0,
+    right: 0,
     width: '100%',
-    padding: Spacing.three,
+    borderTopWidth: 1,
     justifyContent: 'center',
     alignItems: 'center',
     flexDirection: 'row',
+    zIndex: 100,
+    boxShadow: '0 -2px 10px rgba(0, 0, 0, 0.04)',
   },
   innerContainer: {
-    paddingVertical: Spacing.two,
-    paddingHorizontal: Spacing.three,
-    borderRadius: 28,
+    width: '100%',
+    maxWidth: MaxContentWidth,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
-    borderWidth: 1,
-    gap: Spacing.two,
-    maxWidth: MaxContentWidth,
-    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.12)',
+    height: 64,
+    paddingHorizontal: Spacing.two,
+  },
+  tabPressable: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: '100%',
+  },
+  tabButtonView: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 3,
+    paddingVertical: 2,
+  },
+  iconBadge: {
+    paddingHorizontal: Spacing.three,
+    paddingVertical: 3,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tabLabel: {
+    fontSize: 11,
+    letterSpacing: 0.2,
   },
   pressed: {
     opacity: 0.7,
-  },
-  tabButtonView: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.two,
-    paddingVertical: Spacing.two,
-    paddingHorizontal: Spacing.four,
-    borderRadius: 20,
   },
 });

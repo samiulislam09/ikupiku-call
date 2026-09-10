@@ -9,8 +9,10 @@ export default function AppTabs() {
 
   return (
     <NativeTabs
-      backgroundColor={colors.background}
+      backgroundColor={colors.card}
       indicatorColor={colors.backgroundElement}
+      disableTransparentOnScrollEdge={true}
+      shadowColor={colors.border}
       labelStyle={{ selected: { color: colors.primary } }}>
       <NativeTabs.Trigger name="index">
         <NativeTabs.Trigger.Label>Call Logs</NativeTabs.Trigger.Label>

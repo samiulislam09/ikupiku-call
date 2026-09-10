@@ -13,7 +13,7 @@ import { FloatingKeypadButton } from '@/components/keypad/floating-keypad-button
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { AppIcon } from '@/components/ui/app-icon';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 interface Contact {
@@ -151,7 +151,7 @@ export default function ContactsScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeArea}>
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.titleRow}>
@@ -389,10 +389,9 @@ const styles = StyleSheet.create({
     flex: 1,
     maxWidth: MaxContentWidth,
     paddingHorizontal: Spacing.four,
-    paddingBottom: BottomTabInset + Spacing.three,
   },
   header: {
-    paddingTop: Spacing.three,
+    paddingTop: Spacing.two,
     paddingBottom: Spacing.two,
     gap: Spacing.two,
   },
@@ -428,7 +427,7 @@ const styles = StyleSheet.create({
     outlineWidth: 0,
   } as any,
   listContent: {
-    paddingBottom: 90,
+    paddingBottom: 84,
     paddingTop: Spacing.one,
   },
   headerExtras: {

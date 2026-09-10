@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  View,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -13,7 +13,7 @@ import { FloatingKeypadButton } from '@/components/keypad/floating-keypad-button
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { AppIcon } from '@/components/ui/app-icon';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { ThemeMode, useThemeContext } from '@/context/theme-context';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -35,7 +35,7 @@ export default function ProfileScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeArea}>
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}>
@@ -463,14 +463,13 @@ const styles = StyleSheet.create({
     flex: 1,
     maxWidth: MaxContentWidth,
     paddingHorizontal: Spacing.four,
-    paddingBottom: BottomTabInset + Spacing.three,
   },
   scrollContent: {
-    paddingBottom: 100,
-    paddingTop: Spacing.three,
+    paddingBottom: 84,
+    paddingTop: Spacing.two,
   },
   header: {
-    paddingBottom: Spacing.three,
+    paddingBottom: Spacing.two,
   },
   title: {
     fontSize: 28,

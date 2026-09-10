@@ -1,14 +1,14 @@
 import React, {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useState,
+    createContext,
+    useCallback,
+    useContext,
+    useEffect,
+    useState,
 } from 'react';
 import {
-  Appearance,
-  Platform,
-  useColorScheme as useRNColorScheme,
+    Appearance,
+    Platform,
+    useColorScheme as useRNColorScheme,
 } from 'react-native';
 
 import { Colors, Theme } from '@/constants/theme';
@@ -108,3 +108,4 @@ export function useThemeContext() {
   }
   return context;
 }
+
