@@ -20,8 +20,8 @@ export function useSwipeDownToDismiss({
   visible = true,
   dismissThreshold = 50,
 }: UseSwipeDownToDismissOptions) {
-  const screenHeight = Dimensions.get('window').height;
-  const translateY = useRef(new Animated.Value(0)).current;
+  const screenHeight = Dimensions.get('window').height || 850;
+  const translateY = useRef(new Animated.Value(screenHeight)).current;
   const [isDragging, setIsDragging] = useState(false);
   const scrollYRef = useRef(0);
   const isDismissing = useRef(false);
@@ -48,6 +48,9 @@ export function useSwipeDownToDismiss({
         friction: 9,
         useNativeDriver: Platform.OS !== 'web',
       }).start();
+    } else {
+      translateY.setValue(screenHeight);
+      isDismissing.current = false;
     }
   }, [visible, screenHeight, translateY]);
 
@@ -63,12 +66,13 @@ export function useSwipeDownToDismiss({
 
     Animated.timing(translateY, {
       toValue: screenHeight,
-      duration: 200,
+      duration: 180,
       useNativeDriver: Platform.OS !== 'web',
     }).start(() => {
       onClose();
-      // DO NOT reset translateY to 0 here!
-      // Keeping it at screenHeight guarantees zero snap-back or gray flicker during unmount.
+      // Keep translateY at screenHeight so:
+      // 1. Zero flicker during unmount.
+      // 2. Next opening starts cleanly from screenHeight.
     });
   }, [screenHeight, onClose, translateY]);
 
@@ -230,7 +234,7 @@ export function useSwipeDownToDismiss({
   });
 
   const backdropOpacity = translateY.interpolate({
-    inputRange: [0, 250],
+    inputRange: [0, 300],
     outputRange: [1, 0],
     extrapolate: 'clamp',
   });

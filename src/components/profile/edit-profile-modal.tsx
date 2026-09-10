@@ -91,16 +91,6 @@ export function EditProfileModal({ visible, onClose }: EditProfileModalProps) {
     }
   }, [visible, profile]);
 
-  const handleSave = () => {
-    updateProfile({
-      name: name.trim() || 'Alex Morgan',
-      phone: phone.trim() || '+1 (555) 019-2831',
-      photoUri,
-      avatarColor,
-    });
-    onClose();
-  };
-
   const handleFileUploadClick = () => {
     if (Platform.OS === 'web' && fileInputRef.current) {
       fileInputRef.current.click();
@@ -142,6 +132,16 @@ export function EditProfileModal({ visible, onClose }: EditProfileModalProps) {
     onClose,
     visible,
   });
+
+  const handleSave = () => {
+    updateProfile({
+      name: name.trim() || 'Alex Morgan',
+      phone: phone.trim() || '+1 (555) 019-2831',
+      photoUri,
+      avatarColor,
+    });
+    dismissModal();
+  };
 
   if (!visible) return null;
 

@@ -481,7 +481,7 @@ export function CallDetailsModal({ call, visible, onClose, onDeleteCall }: CallD
                     if (onDeleteCall && call) {
                       onDeleteCall(call.id);
                     }
-                    onClose();
+                    dismissModal();
                   }}
                   style={styles.menuRow}>
                   <View style={styles.menuRowLeft}>

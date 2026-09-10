@@ -465,7 +465,7 @@ export function ContactDetailsModal({
                     scaleTo={0.96}
                     onPress={() => {
                       onDeleteContact(contact.id);
-                      onClose();
+                      dismissModal();
                     }}
                     style={[
                       styles.deleteButton,
