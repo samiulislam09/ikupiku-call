@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import {
   FlatList,
   Modal,
+  Platform,
   StyleSheet,
   TextInput,
   View
@@ -14,7 +15,7 @@ import { ThemedText } from '@/components/themed-text';
 import { AppIcon } from '@/components/ui/app-icon';
 import { SpringPressable } from '@/components/ui/spring-pressable';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
+import { useThemeContext } from '@/context/theme-context';
 import { appStorage } from '@/utils/storage';
 
 interface InCallContactsSheetProps {
@@ -23,7 +24,7 @@ interface InCallContactsSheetProps {
 }
 
 export function InCallContactsSheet({ visible, onClose }: InCallContactsSheetProps) {
-  const theme = useTheme();
+  const { theme, isDark } = useThemeContext();
   const [searchQuery, setSearchQuery] = useState('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
@@ -64,46 +65,46 @@ export function InCallContactsSheet({ visible, onClose }: InCallContactsSheetPro
       animationType="slide"
       transparent={true}
       onRequestClose={onClose}>
-      <View style={styles.overlay}>
-        <View style={styles.sheetContainer}>
+      <View style={[styles.overlay, { backgroundColor: isDark ? 'rgba(0, 0, 0, 0.65)' : 'rgba(0, 0, 0, 0.4)' }]}>
+        <View style={[styles.sheetContainer, { backgroundColor: theme.background, borderColor: theme.border }]}>
           <SafeAreaView edges={['top', 'bottom']} style={styles.safeArea}>
             {/* Top Drag Handle */}
             <View style={styles.dragBar}>
-              <View style={styles.dragPill} />
+              <View style={[styles.dragPill, { backgroundColor: theme.border }]} />
             </View>
 
             {/* Header */}
             <View style={styles.header}>
               <View style={styles.headerLeft}>
-                <View style={styles.activeCallBadge}>
-                  <View style={styles.pulsingDot} />
-                  <ThemedText style={styles.activeCallText}>CALL ACTIVE</ThemedText>
+                <View style={[styles.activeCallBadge, { backgroundColor: theme.callGreen + '18' }]}>
+                  <View style={[styles.pulsingDot, { backgroundColor: theme.callGreen }]} />
+                  <ThemedText style={[styles.activeCallText, { color: theme.callGreen }]}>CALL ACTIVE</ThemedText>
                 </View>
-                <ThemedText type="subtitle" style={styles.title}>
+                <ThemedText type="subtitle" style={[styles.title, { color: theme.text }]}>
                   Contacts Lookup
                 </ThemedText>
               </View>
               <SpringPressable
                 onPress={onClose}
                 hitSlop={12}
-                style={styles.closeBtn}>
-                <AppIcon name="close" size={20} color="#FFFFFF" />
+                style={[styles.closeBtn, { backgroundColor: theme.backgroundElement }]}>
+                <AppIcon name="close" size={20} color={theme.text} />
               </SpringPressable>
             </View>
 
             {/* Search Input */}
-            <View style={styles.searchBar}>
-              <AppIcon name="search" size={18} color="rgba(255, 255, 255, 0.5)" />
+            <View style={[styles.searchBar, { backgroundColor: theme.card, borderColor: theme.border }]}>
+              <AppIcon name="search" size={18} color={theme.textSecondary} />
               <TextInput
                 value={searchQuery}
                 onChangeText={setSearchQuery}
                 placeholder="Search name or phone number..."
-                placeholderTextColor="rgba(255, 255, 255, 0.4)"
-                style={styles.searchInput}
+                placeholderTextColor={theme.textSecondary}
+                style={[styles.searchInput, { color: theme.text }]}
               />
               {searchQuery.length > 0 && (
                 <SpringPressable onPress={() => setSearchQuery('')} hitSlop={8}>
-                  <AppIcon name="close" size={16} color="rgba(255, 255, 255, 0.5)" />
+                  <AppIcon name="close" size={16} color={theme.textSecondary} />
                 </SpringPressable>
               )}
             </View>
@@ -119,7 +120,7 @@ export function InCallContactsSheet({ visible, onClose }: InCallContactsSheetPro
                 return (
                   <Animated.View
                     entering={FadeInDown.delay(index * 20).springify()}
-                    style={styles.contactCard}>
+                    style={[styles.contactCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
                     <View
                       style={[
                         styles.avatar,
@@ -136,10 +137,10 @@ export function InCallContactsSheet({ visible, onClose }: InCallContactsSheetPro
                     </View>
 
                     <View style={styles.infoCol}>
-                      <ThemedText style={styles.nameText}>
+                      <ThemedText style={[styles.nameText, { color: theme.text }]}>
                         {item.name}
                       </ThemedText>
-                      <ThemedText style={styles.phoneText}>
+                      <ThemedText style={[styles.phoneText, { color: theme.textSecondary }]}>
                         {item.label} • {item.phone}
                       </ThemedText>
                     </View>
@@ -149,17 +150,20 @@ export function InCallContactsSheet({ visible, onClose }: InCallContactsSheetPro
                       onPress={() => handleCopy(item.id, item.phone)}
                       style={[
                         styles.copyBtn,
-                        isCopied && { backgroundColor: theme.callGreen + '25', borderColor: theme.callGreen },
+                        {
+                          backgroundColor: isCopied ? theme.callGreen + '20' : theme.backgroundElement,
+                          borderColor: isCopied ? theme.callGreen : theme.border,
+                        },
                       ]}>
                       <AppIcon
                         name={isCopied ? 'check' : 'copy'}
                         size={14}
-                        color={isCopied ? theme.callGreen : '#FFFFFF'}
+                        color={isCopied ? theme.callGreen : theme.text}
                       />
                       <ThemedText
                         style={[
                           styles.copyBtnText,
-                          isCopied && { color: theme.callGreen },
+                          { color: isCopied ? theme.callGreen : theme.text },
                         ]}>
                         {isCopied ? 'Copied' : 'Copy'}
                       </ThemedText>
@@ -169,7 +173,7 @@ export function InCallContactsSheet({ visible, onClose }: InCallContactsSheetPro
               }}
               ListEmptyComponent={
                 <View style={styles.emptyWrap}>
-                  <ThemedText style={styles.emptyText}>
+                  <ThemedText style={[styles.emptyText, { color: theme.textSecondary }]}>
                     No contacts matched your search query.
                   </ThemedText>
                 </View>
@@ -185,19 +189,30 @@ export function InCallContactsSheet({ visible, onClose }: InCallContactsSheetPro
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.65)',
     justifyContent: 'flex-end',
   },
   sheetContainer: {
-    backgroundColor: '#0F172A',
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
     maxHeight: '85%',
     width: '100%',
     maxWidth: MaxContentWidth,
     alignSelf: 'center',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 16,
+      },
+      android: {
+        elevation: 10,
+      },
+      web: {
+        boxShadow: '0 -8px 32px rgba(0, 0, 0, 0.15)',
+      },
+    }),
   },
   safeArea: {
     paddingHorizontal: Spacing.four,
@@ -212,7 +227,6 @@ const styles = StyleSheet.create({
     width: 38,
     height: 4,
     borderRadius: 2,
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
   },
   header: {
     flexDirection: 'row',
@@ -230,23 +244,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 10,
-    backgroundColor: 'rgba(16, 185, 129, 0.15)',
     alignSelf: 'flex-start',
   },
   pulsingDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#10B981',
   },
   activeCallText: {
-    color: '#10B981',
     fontSize: 10,
     fontWeight: '800',
     letterSpacing: 0.5,
   },
   title: {
-    color: '#FFFFFF',
     fontSize: 22,
     fontWeight: '800',
   },
@@ -254,16 +264,16 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
     alignItems: 'center',
     justifyContent: 'center',
+    ...Platform.select({
+      web: { cursor: 'pointer' },
+    }),
   },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
     borderRadius: 14,
     paddingHorizontal: Spacing.three,
     height: 42,
@@ -273,7 +283,6 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    color: '#FFFFFF',
     fontSize: 14,
     paddingVertical: 0,
     outlineWidth: 0,
@@ -285,11 +294,9 @@ const styles = StyleSheet.create({
   contactCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderRadius: 16,
     padding: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
     gap: 12,
   },
   avatar: {
@@ -305,12 +312,10 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   nameText: {
-    color: '#FFFFFF',
     fontSize: 15,
     fontWeight: '700',
   },
   phoneText: {
-    color: 'rgba(255, 255, 255, 0.6)',
     fontSize: 12,
   },
   copyBtn: {
@@ -320,12 +325,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    ...Platform.select({
+      web: { cursor: 'pointer' },
+    }),
   },
   copyBtnText: {
-    color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '700',
   },
@@ -334,7 +339,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   emptyText: {
-    color: 'rgba(255, 255, 255, 0.5)',
     fontSize: 14,
   },
 });

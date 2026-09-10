@@ -6,7 +6,7 @@ import { ThemedText } from '@/components/themed-text';
 import { AppIcon } from '@/components/ui/app-icon';
 import { SpringPressable } from '@/components/ui/spring-pressable';
 import { Spacing } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
+import { useThemeContext } from '@/context/theme-context';
 
 interface KeypadKey {
   digit: string;
@@ -33,7 +33,7 @@ interface InCallKeypadProps {
 }
 
 export function InCallKeypad({ onClose }: InCallKeypadProps) {
-  const theme = useTheme();
+  const { theme, isDark } = useThemeContext();
   const [typedDigits, setTypedDigits] = useState('');
 
   const handlePress = (digit: string) => {
@@ -47,23 +47,23 @@ export function InCallKeypad({ onClose }: InCallKeypadProps) {
       style={[
         styles.container,
         {
-          backgroundColor: 'rgba(15, 23, 42, 0.95)',
-          borderTopColor: 'rgba(255, 255, 255, 0.12)',
+          backgroundColor: isDark ? 'rgba(15, 23, 42, 0.96)' : 'rgba(255, 255, 255, 0.98)',
+          borderTopColor: theme.border,
         },
       ]}>
       {/* Header with entered digits and Hide button */}
       <View style={styles.header}>
         <View style={styles.typedContainer}>
-          <ThemedText style={styles.typedText}>
+          <ThemedText style={[styles.typedText, { color: theme.text }]}>
             {typedDigits || 'Tap digits for DTMF'}
           </ThemedText>
         </View>
         <SpringPressable
           scaleTo={0.92}
           onPress={onClose}
-          style={styles.hideButton}>
-          <ThemedText style={styles.hideText}>Hide</ThemedText>
-          <AppIcon name="close" size={16} color="#FFFFFF" />
+          style={[styles.hideButton, { backgroundColor: theme.backgroundElement }]}>
+          <ThemedText style={[styles.hideText, { color: theme.text }]}>Hide</ThemedText>
+          <AppIcon name="close" size={16} color={theme.text} />
         </SpringPressable>
       </View>
 
@@ -74,10 +74,18 @@ export function InCallKeypad({ onClose }: InCallKeypadProps) {
             key={item.digit}
             scaleTo={0.88}
             onPress={() => handlePress(item.digit)}
-            style={styles.keyButton}>
-            <ThemedText style={styles.keyDigit}>{item.digit}</ThemedText>
+            style={[
+              styles.keyButton,
+              {
+                backgroundColor: theme.card,
+                borderColor: theme.border,
+              },
+            ]}>
+            <ThemedText style={[styles.keyDigit, { color: theme.text }]}>{item.digit}</ThemedText>
             {item.letters && (
-              <ThemedText style={styles.keyLetters}>{item.letters}</ThemedText>
+              <ThemedText style={[styles.keyLetters, { color: theme.textSecondary }]}>
+                {item.letters}
+              </ThemedText>
             )}
           </SpringPressable>
         ))}
@@ -102,11 +110,12 @@ const styles = StyleSheet.create({
     ...Platform.select({
       web: {
         backdropFilter: 'blur(20px)',
+        boxShadow: '0 -4px 20px rgba(0, 0, 0, 0.1)',
       } as any,
       default: {
         shadowColor: '#000',
         shadowOffset: { width: 0, height: -4 },
-        shadowOpacity: 0.35,
+        shadowOpacity: 0.15,
         shadowRadius: 16,
       },
     }),
@@ -122,7 +131,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   typedText: {
-    color: '#FFFFFF',
     fontSize: 20,
     fontWeight: '700',
     letterSpacing: 2,
@@ -134,10 +142,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 14,
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    ...Platform.select({
+      web: { cursor: 'pointer' },
+    }),
   },
   hideText: {
-    color: '#FFFFFF',
     fontSize: 13,
     fontWeight: '600',
   },
@@ -151,20 +160,31 @@ const styles = StyleSheet.create({
     width: 72,
     height: 60,
     borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 1,
+      },
+      web: {
+        boxShadow: '0 1px 4px rgba(0, 0, 0, 0.04)',
+        cursor: 'pointer',
+      },
+    }),
   },
   keyDigit: {
-    color: '#FFFFFF',
     fontSize: 22,
     fontWeight: '700',
     lineHeight: 26,
   },
   keyLetters: {
-    color: 'rgba(255, 255, 255, 0.5)',
     fontSize: 9,
     fontWeight: '700',
     letterSpacing: 1,

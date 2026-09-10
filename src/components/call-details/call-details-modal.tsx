@@ -134,16 +134,6 @@ export function CallDetailsModal({ call, visible, onClose, onDeleteCall }: CallD
             </View>
 
             {/* Top Bar */}
-            <View
-              {...grabberPanHandlers}
-              style={[
-                styles.headerBar,
-                Platform.select({
-                  web: {
-                    touchAction: 'none',
-                  } as any,
-                }),
-              ]}>
             <View style={styles.headerBar}>
               <SpringPressable
                 scaleTo={0.9}

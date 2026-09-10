@@ -1,3 +1,4 @@
+import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import {
     Modal,
@@ -24,12 +25,12 @@ import { AppIcon, IconName } from '@/components/ui/app-icon';
 import { SpringPressable } from '@/components/ui/spring-pressable';
 import { Spacing } from '@/constants/theme';
 import { useCall } from '@/context/call-context';
-import { useTheme } from '@/hooks/use-theme';
+import { useThemeContext } from '@/context/theme-context';
 import { InCallContactsSheet } from './in-call-contacts-sheet';
 import { InCallKeypad } from './in-call-keypad';
 
 export function CallingModal() {
-  const theme = useTheme();
+  const { theme, isDark } = useThemeContext();
   const [isInCallContactsOpen, setIsInCallContactsOpen] = useState(false);
   const {
     callStatus,
@@ -179,7 +180,13 @@ export function CallingModal() {
       <Animated.View
         entering={FadeInUp.springify()}
         exiting={FadeOut}
-        style={styles.minimizedIsland}>
+        style={[
+          styles.minimizedIsland,
+          {
+            backgroundColor: isDark ? 'rgba(15, 23, 42, 0.94)' : 'rgba(255, 255, 255, 0.96)',
+            borderColor: theme.border,
+          },
+        ]}>
         <SpringPressable
           scaleTo={0.96}
           onPress={() => setIsMinimized(false)}
@@ -187,40 +194,40 @@ export function CallingModal() {
           <View
             style={[
               styles.miniAvatar,
-              { backgroundColor: (caller.avatarColor || theme.primary) + '40' },
+              { backgroundColor: (caller.avatarColor || theme.primary) + '25' },
             ]}>
-            <ThemedText style={styles.miniAvatarText}>
+            <ThemedText style={[styles.miniAvatarText, { color: caller.avatarColor || theme.primary }]}>
               {getInitials(caller.name)}
             </ThemedText>
           </View>
           <View style={styles.miniDetails}>
-            <ThemedText style={styles.miniName} numberOfLines={1}>
+            <ThemedText style={[styles.miniName, { color: theme.text }]} numberOfLines={1}>
               {caller.name}
             </ThemedText>
             <View style={styles.miniStatusRow}>
               <View
                 style={[
                   styles.miniStatusDot,
-                  { backgroundColor: isOnHold ? '#F59E0B' : '#10B981' },
+                  { backgroundColor: isOnHold ? '#F59E0B' : theme.callGreen },
                 ]}
               />
               <ThemedText
                 style={[
                   styles.miniTimer,
-                  isOnHold && { color: '#F59E0B' },
+                  { color: isOnHold ? '#F59E0B' : theme.callGreen },
                 ]}>
                 {isOnHold ? 'On Hold' : formattedDuration}
               </ThemedText>
             </View>
           </View>
           <View style={styles.miniRightActions}>
-            <View style={styles.miniTapToReturnBadge}>
-              <ThemedText style={styles.miniReturnText}>Tap to open</ThemedText>
+            <View style={[styles.miniTapToReturnBadge, { backgroundColor: theme.backgroundElement }]}>
+              <ThemedText style={[styles.miniReturnText, { color: theme.textSecondary }]}>Tap to open</ThemedText>
             </View>
             <SpringPressable
               scaleTo={0.88}
               onPress={endCall}
-              style={styles.miniEndButton}>
+              style={[styles.miniEndButton, { backgroundColor: theme.callRed }]}>
               <AppIcon name="phone-down" size={16} color="#FFFFFF" />
             </SpringPressable>
           </View>
@@ -235,7 +242,8 @@ export function CallingModal() {
       animationType="fade"
       transparent={false}
       statusBarTranslucent>
-      <View style={styles.container}>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
+      <View style={[styles.container, { backgroundColor: theme.background }]}>
         <SafeAreaView style={styles.safeArea}>
           {/* Top Bar with Quality & Minimize */}
           <View style={styles.topBar}>
@@ -243,21 +251,21 @@ export function CallingModal() {
               <SpringPressable
                 scaleTo={0.9}
                 onPress={() => setIsMinimized(true)}
-                style={styles.topIconButton}>
-                <AppIcon name="close" size={20} color="#FFFFFF" />
+                style={[styles.topIconButton, { backgroundColor: theme.backgroundElement }]}>
+                <AppIcon name="close" size={20} color={theme.text} />
               </SpringPressable>
             ) : (
               <View style={{ width: 40 }} />
             )}
 
-            <View style={styles.qualityPill}>
+            <View style={[styles.qualityPill, { backgroundColor: theme.card, borderColor: theme.border }]}>
               <View
                 style={[
                   styles.qualityDot,
                   { backgroundColor: isConnected ? theme.callGreen : theme.primary },
                 ]}
               />
-              <ThemedText style={styles.qualityText}>
+              <ThemedText style={[styles.qualityText, { color: theme.textSecondary }]}>
                 {isConnected
                   ? 'HD Voice • Opus 48kHz'
                   : 'End-to-End Encrypted'}
@@ -276,21 +284,21 @@ export function CallingModal() {
                   <Animated.View
                     style={[
                       styles.radarRing,
-                      { backgroundColor: theme.callGreen + '30' },
+                      { backgroundColor: theme.callGreen + '20' },
                       ring3Style,
                     ]}
                   />
                   <Animated.View
                     style={[
                       styles.radarRing,
-                      { backgroundColor: theme.callGreen + '45' },
+                      { backgroundColor: theme.callGreen + '35' },
                       ring2Style,
                     ]}
                   />
                   <Animated.View
                     style={[
                       styles.radarRing,
-                      { backgroundColor: theme.callGreen + '60' },
+                      { backgroundColor: theme.callGreen + '50' },
                       ring1Style,
                     ]}
                   />
@@ -303,7 +311,7 @@ export function CallingModal() {
                   styles.avatar,
                   {
                     backgroundColor: caller.avatarColor || theme.primary,
-                    borderColor: 'rgba(255, 255, 255, 0.25)',
+                    borderColor: isDark ? 'rgba(255, 255, 255, 0.25)' : 'rgba(0, 0, 0, 0.08)',
                   },
                 ]}>
                 <ThemedText style={styles.avatarText}>
@@ -313,8 +321,8 @@ export function CallingModal() {
             </View>
 
             {/* Caller Name & Subtitle */}
-            <ThemedText style={styles.callerName}>{caller.name}</ThemedText>
-            <ThemedText style={styles.callerNumber}>
+            <ThemedText style={[styles.callerName, { color: theme.text }]}>{caller.name}</ThemedText>
+            <ThemedText style={[styles.callerNumber, { color: theme.textSecondary }]}>
               {caller.label ? `${caller.label} • ` : ''}
               {caller.number}
             </ThemedText>
@@ -322,16 +330,16 @@ export function CallingModal() {
             {/* Status / Live Duration Visualizer */}
             <View style={styles.statusRow}>
               {isIncoming && (
-                <View style={styles.incomingBadge}>
-                  <ThemedText style={styles.incomingText}>
+                <View style={[styles.incomingBadge, { backgroundColor: theme.callGreen + '18', borderColor: theme.callGreen + '40' }]}>
+                  <ThemedText style={[styles.incomingText, { color: theme.callGreen }]}>
                     Incoming Call...
                   </ThemedText>
                 </View>
               )}
 
               {isOutgoing && (
-                <View style={styles.outgoingBadge}>
-                  <ThemedText style={styles.outgoingText}>
+                <View style={[styles.outgoingBadge, { backgroundColor: theme.primary + '18', borderColor: theme.primary + '40' }]}>
+                  <ThemedText style={[styles.outgoingText, { color: theme.primary }]}>
                     Calling...
                   </ThemedText>
                 </View>
@@ -347,17 +355,17 @@ export function CallingModal() {
                   ) : (
                     <>
                       {/* Live Timer */}
-                      <ThemedText style={styles.durationTimer}>
+                      <ThemedText style={[styles.durationTimer, { color: theme.text }]}>
                         {formattedDuration}
                       </ThemedText>
 
                       {/* Dancing Equalizer Waveform */}
                       <View style={styles.equalizer}>
-                        <Animated.View style={[styles.eqBar, bar1Style]} />
-                        <Animated.View style={[styles.eqBar, bar2Style]} />
-                        <Animated.View style={[styles.eqBar, bar3Style]} />
-                        <Animated.View style={[styles.eqBar, bar4Style]} />
-                        <Animated.View style={[styles.eqBar, bar5Style]} />
+                        <Animated.View style={[styles.eqBar, { backgroundColor: theme.callGreen }, bar1Style]} />
+                        <Animated.View style={[styles.eqBar, { backgroundColor: theme.callGreen }, bar2Style]} />
+                        <Animated.View style={[styles.eqBar, { backgroundColor: theme.callGreen }, bar3Style]} />
+                        <Animated.View style={[styles.eqBar, { backgroundColor: theme.callGreen }, bar4Style]} />
+                        <Animated.View style={[styles.eqBar, { backgroundColor: theme.callGreen }, bar5Style]} />
                       </View>
                     </>
                   )}
@@ -365,8 +373,8 @@ export function CallingModal() {
               )}
 
               {isEnded && (
-                <View style={styles.endedBadge}>
-                  <ThemedText style={styles.endedText}>Call Ended</ThemedText>
+                <View style={[styles.endedBadge, { backgroundColor: theme.callRed + '18', borderColor: theme.callRed + '40' }]}>
+                  <ThemedText style={[styles.endedText, { color: theme.callRed }]}>Call Ended</ThemedText>
                 </View>
               )}
             </View>
@@ -384,18 +392,18 @@ export function CallingModal() {
                   <SpringPressable
                     scaleTo={0.92}
                     onPress={() => declineCall()}
-                    style={styles.quickChip}>
-                    <AppIcon name="clock" size={15} color="rgba(255, 255, 255, 0.8)" />
-                    <ThemedText style={styles.quickChipText}>
+                    style={[styles.quickChip, { backgroundColor: theme.card, borderColor: theme.border }]}>
+                    <AppIcon name="clock" size={15} color={theme.textSecondary} />
+                    <ThemedText style={[styles.quickChipText, { color: theme.text }]}>
                       Remind Me
                     </ThemedText>
                   </SpringPressable>
                   <SpringPressable
                     scaleTo={0.92}
                     onPress={() => declineCall()}
-                    style={styles.quickChip}>
-                    <AppIcon name="message" size={15} color="rgba(255, 255, 255, 0.8)" />
-                    <ThemedText style={styles.quickChipText}>
+                    style={[styles.quickChip, { backgroundColor: theme.card, borderColor: theme.border }]}>
+                    <AppIcon name="message" size={15} color={theme.textSecondary} />
+                    <ThemedText style={[styles.quickChipText, { color: theme.text }]}>
                       Message
                     </ThemedText>
                   </SpringPressable>
@@ -413,7 +421,7 @@ export function CallingModal() {
                       ]}>
                       <AppIcon name="phone-down" size={32} color="#FFFFFF" />
                     </SpringPressable>
-                    <ThemedText style={styles.buttonLabel}>Decline</ThemedText>
+                    <ThemedText style={[styles.buttonLabel, { color: theme.text }]}>Decline</ThemedText>
                   </View>
 
                   <View style={styles.actionCol}>
@@ -426,7 +434,7 @@ export function CallingModal() {
                       ]}>
                       <AppIcon name="phone" size={32} color="#FFFFFF" />
                     </SpringPressable>
-                    <ThemedText style={styles.buttonLabel}>Accept</ThemedText>
+                    <ThemedText style={[styles.buttonLabel, { color: theme.text }]}>Accept</ThemedText>
                   </View>
                 </View>
               </Animated.View>
@@ -497,7 +505,7 @@ export function CallingModal() {
                     ]}>
                     <AppIcon name="phone-down" size={34} color="#FFFFFF" />
                   </SpringPressable>
-                  <ThemedText style={styles.buttonLabel}>End Call</ThemedText>
+                  <ThemedText style={[styles.buttonLabel, { color: theme.textSecondary }]}>End Call</ThemedText>
                 </View>
               </Animated.View>
             )}
@@ -527,6 +535,7 @@ interface InCallButtonProps {
 }
 
 function InCallButton({ icon, label, active, onPress }: InCallButtonProps) {
+  const { theme, isDark } = useThemeContext();
   return (
     <View style={styles.inCallButtonCol}>
       <SpringPressable
@@ -534,18 +543,32 @@ function InCallButton({ icon, label, active, onPress }: InCallButtonProps) {
         onPress={onPress}
         style={[
           styles.inCallButton,
-          active && styles.inCallButtonActive,
+          {
+            backgroundColor: active ? theme.primary : theme.card,
+            borderColor: active ? theme.primary : theme.border,
+            ...(Platform.OS === 'web'
+              ? {
+                  boxShadow: isDark
+                    ? '0 4px 14px rgba(0, 0, 0, 0.4)'
+                    : '0 2px 8px rgba(0, 0, 0, 0.06)',
+                  cursor: 'pointer',
+                }
+              : {}),
+          },
         ]}>
         <AppIcon
           name={icon}
           size={24}
-          color={active ? '#0F172A' : '#FFFFFF'}
+          color={active ? '#FFFFFF' : theme.text}
         />
       </SpringPressable>
       <ThemedText
         style={[
           styles.inCallLabel,
-          active && { color: '#FFFFFF', fontWeight: '700' },
+          {
+            color: active ? theme.primary : theme.textSecondary,
+            fontWeight: active ? '700' : '500',
+          },
         ]}>
         {label}
       </ThemedText>
@@ -556,7 +579,6 @@ function InCallButton({ icon, label, active, onPress }: InCallButtonProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A0E1A',
   },
   safeArea: {
     flex: 1,
@@ -574,9 +596,11 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
     alignItems: 'center',
     justifyContent: 'center',
+    ...Platform.select({
+      web: { cursor: 'pointer' },
+    }),
   },
   qualityPill: {
     flexDirection: 'row',
@@ -585,9 +609,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   qualityDot: {
     width: 7,
@@ -595,7 +617,6 @@ const styles = StyleSheet.create({
     borderRadius: 3.5,
   },
   qualityText: {
-    color: 'rgba(255, 255, 255, 0.75)',
     fontSize: 11,
     fontWeight: '600',
     letterSpacing: 0.2,
@@ -631,14 +652,14 @@ const styles = StyleSheet.create({
       ios: {
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.4,
+        shadowOpacity: 0.2,
         shadowRadius: 16,
       },
       android: {
         elevation: 10,
       },
       web: {
-        boxShadow: '0 12px 32px rgba(0, 0, 0, 0.5)',
+        boxShadow: '0 8px 24px rgba(0, 0, 0, 0.15)',
       },
     }),
   },
@@ -648,7 +669,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   callerName: {
-    color: '#FFFFFF',
     fontSize: 28,
     fontWeight: '800',
     letterSpacing: -0.5,
@@ -656,7 +676,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   callerNumber: {
-    color: 'rgba(255, 255, 255, 0.65)',
     fontSize: 15,
     fontWeight: '500',
     marginBottom: Spacing.three,
@@ -670,12 +689,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 6,
     borderRadius: 20,
-    backgroundColor: 'rgba(16, 185, 129, 0.18)',
     borderWidth: 1,
-    borderColor: 'rgba(16, 185, 129, 0.4)',
   },
   incomingText: {
-    color: '#10B981',
     fontSize: 14,
     fontWeight: '700',
     letterSpacing: 0.3,
@@ -684,12 +700,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 6,
     borderRadius: 20,
-    backgroundColor: 'rgba(99, 102, 241, 0.2)',
     borderWidth: 1,
-    borderColor: 'rgba(99, 102, 241, 0.4)',
   },
   outgoingText: {
-    color: '#818CF8',
     fontSize: 14,
     fontWeight: '700',
     letterSpacing: 0.3,
@@ -700,7 +713,6 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   durationTimer: {
-    color: '#FFFFFF',
     fontSize: 20,
     fontWeight: '700',
     letterSpacing: 1,
@@ -714,7 +726,6 @@ const styles = StyleSheet.create({
   eqBar: {
     width: 3.5,
     borderRadius: 2,
-    backgroundColor: '#10B981',
   },
   holdBadge: {
     flexDirection: 'row',
@@ -736,12 +747,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 6,
     borderRadius: 20,
-    backgroundColor: 'rgba(244, 63, 94, 0.2)',
     borderWidth: 1,
-    borderColor: 'rgba(244, 63, 94, 0.4)',
   },
   endedText: {
-    color: '#F43F5E',
     fontSize: 14,
     fontWeight: '700',
   },
@@ -764,12 +772,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
+    ...Platform.select({
+      web: { cursor: 'pointer' },
+    }),
   },
   quickChipText: {
-    color: 'rgba(255, 255, 255, 0.9)',
     fontSize: 13,
     fontWeight: '600',
   },
@@ -792,19 +800,19 @@ const styles = StyleSheet.create({
       ios: {
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.35,
+        shadowOpacity: 0.3,
         shadowRadius: 12,
       },
       android: {
         elevation: 8,
       },
       web: {
-        boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
+        boxShadow: '0 8px 24px rgba(0, 0, 0, 0.3)',
+        cursor: 'pointer',
       },
     }),
   },
   buttonLabel: {
-    color: '#FFFFFF',
     fontSize: 13,
     fontWeight: '600',
     letterSpacing: 0.2,
@@ -828,20 +836,12 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
-  },
-  inCallButtonActive: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#FFFFFF',
   },
   inCallLabel: {
-    color: 'rgba(255, 255, 255, 0.75)',
     fontSize: 12,
-    fontWeight: '500',
     textAlign: 'center',
   },
   endCallContainer: {
@@ -867,6 +867,7 @@ const styles = StyleSheet.create({
       },
       web: {
         boxShadow: '0 8px 28px rgba(244, 63, 94, 0.5)',
+        cursor: 'pointer',
       },
     }),
   },
@@ -877,18 +878,16 @@ const styles = StyleSheet.create({
     right: 20,
     zIndex: 9999,
     borderRadius: 24,
-    backgroundColor: 'rgba(15, 23, 42, 0.94)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
     ...Platform.select({
       web: {
         backdropFilter: 'blur(20px)',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.45)',
+        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
       } as any,
       default: {
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.4,
+        shadowOpacity: 0.2,
         shadowRadius: 14,
       },
     }),
@@ -908,7 +907,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   miniAvatarText: {
-    color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '700',
   },
@@ -917,7 +915,6 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   miniName: {
-    color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '700',
   },
@@ -932,7 +929,6 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   miniTimer: {
-    color: '#10B981',
     fontSize: 12,
     fontWeight: '600',
   },
@@ -945,10 +941,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
   miniReturnText: {
-    color: 'rgba(255, 255, 255, 0.7)',
     fontSize: 10,
     fontWeight: '600',
   },
@@ -956,7 +950,6 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#F43F5E',
     alignItems: 'center',
     justifyContent: 'center',
   },
