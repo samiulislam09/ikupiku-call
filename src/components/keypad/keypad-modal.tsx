@@ -197,7 +197,8 @@ export function KeypadModal() {
   }, [dialedNumber]);
 
   const {
-    panHandlers,
+    grabberPanHandlers,
+    containerTouchHandlers,
     animatedStyle,
     backdropOpacity,
     isDragging,
@@ -210,36 +211,45 @@ export function KeypadModal() {
   return (
     <Modal
       visible={isKeypadVisible}
-      animationType="slide"
+      animationType="none"
       transparent={true}
       onRequestClose={dismissModal}>
-      <RNAnimated.View
-        style={[
-          styles.modalOverlay,
-          {
-            opacity: backdropOpacity,
-          },
-        ]}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={dismissModal} />
+      <View style={styles.modalOverlay}>
+        <RNAnimated.View
+          style={[
+            StyleSheet.absoluteFill,
+            {
+              backgroundColor: 'rgba(0, 0, 0, 0.45)',
+              opacity: backdropOpacity,
+            },
+          ]}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={dismissModal} />
+        </RNAnimated.View>
 
         <RNAnimated.View
+          {...containerTouchHandlers}
           style={[
             styles.modalBackground,
             { backgroundColor: theme.background },
             animatedStyle,
+            Platform.select({
+              web: {
+                userSelect: 'none',
+              } as any,
+            }),
           ]}>
           <SafeAreaView
             edges={Platform.OS === 'ios' ? ['left', 'right', 'bottom'] : ['top', 'left', 'right', 'bottom']}
             style={styles.safeArea}>
             {/* Drag Handle Bar & Close */}
             <View
-              {...panHandlers}
+              {...grabberPanHandlers}
               style={[
                 styles.topHandleBar,
                 Platform.select({
                   web: {
+                    touchAction: 'none',
                     cursor: isDragging ? 'grabbing' : 'grab',
-                    userSelect: 'none',
                   } as any,
                 }),
               ]}>
@@ -254,7 +264,16 @@ export function KeypadModal() {
               />
             </View>
 
-            <View {...panHandlers} style={styles.headerBar}>
+            <View
+              {...grabberPanHandlers}
+              style={[
+                styles.headerBar,
+                Platform.select({
+                  web: {
+                    touchAction: 'none',
+                  } as any,
+                }),
+              ]}>
               <SpringPressable
                 onPress={dismissModal}
                 hitSlop={12}
@@ -468,7 +487,7 @@ export function KeypadModal() {
           />
           </SafeAreaView>
         </RNAnimated.View>
-      </RNAnimated.View>
+      </View>
     </Modal>
   );
 }
@@ -476,7 +495,7 @@ export function KeypadModal() {
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    backgroundColor: 'transparent',
     justifyContent: 'flex-end',
   },
   modalBackground: {

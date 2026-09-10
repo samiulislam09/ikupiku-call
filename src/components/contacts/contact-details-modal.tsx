@@ -92,7 +92,9 @@ export function ContactDetailsModal({
   };
 
   const {
-    panHandlers,
+    grabberPanHandlers,
+    containerTouchHandlers,
+    onScroll,
     animatedStyle,
     backdropOpacity,
     isDragging,
@@ -146,36 +148,45 @@ export function ContactDetailsModal({
   return (
     <Modal
       visible={visible}
-      animationType="slide"
+      animationType="none"
       transparent={true}
       onRequestClose={dismissModal}>
-      <RNAnimated.View
-        style={[
-          styles.modalOverlay,
-          {
-            opacity: backdropOpacity,
-          },
-        ]}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={dismissModal} />
+      <View style={styles.modalOverlay}>
+        <RNAnimated.View
+          style={[
+            StyleSheet.absoluteFill,
+            {
+              backgroundColor: 'rgba(0, 0, 0, 0.45)',
+              opacity: backdropOpacity,
+            },
+          ]}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={dismissModal} />
+        </RNAnimated.View>
 
         <RNAnimated.View
+          {...containerTouchHandlers}
           style={[
             styles.container,
             { backgroundColor: theme.background },
             animatedStyle,
+            Platform.select({
+              web: {
+                userSelect: 'none',
+              } as any,
+            }),
           ]}>
           <SafeAreaView
             edges={Platform.OS === 'ios' ? ['left', 'right', 'bottom'] : ['top', 'left', 'right', 'bottom']}
             style={styles.safeArea}>
             {/* Top Drag Handle Bar */}
             <View
-              {...panHandlers}
+              {...grabberPanHandlers}
               style={[
                 styles.dragBar,
                 Platform.select({
                   web: {
+                    touchAction: 'none',
                     cursor: isDragging ? 'grabbing' : 'grab',
-                    userSelect: 'none',
                   } as any,
                 }),
               ]}>
@@ -184,14 +195,23 @@ export function ContactDetailsModal({
                   styles.dragPill,
                   {
                     backgroundColor: theme.border,
-                    width: isDragging ? 52 : 36,
+                    width: isDragging ? 54 : 36,
                   },
                 ]}
               />
             </View>
 
             {/* Header Bar */}
-            <View {...panHandlers} style={styles.header}>
+            <View
+              {...grabberPanHandlers}
+              style={[
+                styles.header,
+                Platform.select({
+                  web: {
+                    touchAction: 'none',
+                  } as any,
+                }),
+              ]}>
               <SpringPressable
                 scaleTo={0.92}
                 onPress={() => {
@@ -242,6 +262,9 @@ export function ContactDetailsModal({
           </View>
 
           <ScrollView
+            onScroll={onScroll}
+            scrollEventThrottle={16}
+            bounces={false}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.scrollContent}>
             {isEditing ? (
@@ -667,7 +690,7 @@ export function ContactDetailsModal({
           </ScrollView>
           </SafeAreaView>
         </RNAnimated.View>
-      </RNAnimated.View>
+      </View>
     </Modal>
   );
 }
@@ -675,7 +698,7 @@ export function ContactDetailsModal({
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    backgroundColor: 'transparent',
     justifyContent: 'flex-end',
   },
   container: {
