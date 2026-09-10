@@ -202,18 +202,10 @@ export function EditProfileModal({ visible, onClose }: EditProfileModalProps) {
             </View>
 
             {/* Header Bar */}
-            <View
-              {...grabberPanHandlers}
-              style={[
-                styles.headerBar,
-                Platform.select({
-                  web: {
-                    touchAction: 'none',
-                  } as any,
-                }),
-              ]}>
+            <View style={styles.headerBar}>
               <SpringPressable
                 scaleTo={0.92}
+                hitSlop={12}
                 onPress={dismissModal}
                 style={[styles.headerButton, { backgroundColor: theme.backgroundElement }]}>
                 <ThemedText style={{ color: theme.textSecondary, fontWeight: '600' }}>
@@ -491,6 +483,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 12,
+    ...Platform.select({
+      web: {
+        cursor: 'pointer',
+      },
+    }),
   },
   headerTitle: {
     fontSize: 16,
@@ -500,6 +497,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 7,
     borderRadius: 14,
+    ...Platform.select({
+      web: {
+        cursor: 'pointer',
+      },
+    }),
   },
   saveButtonText: {
     color: '#FFFFFF',

@@ -264,16 +264,7 @@ export function KeypadModal() {
               />
             </View>
 
-            <View
-              {...grabberPanHandlers}
-              style={[
-                styles.headerBar,
-                Platform.select({
-                  web: {
-                    touchAction: 'none',
-                  } as any,
-                }),
-              ]}>
+            <View style={styles.headerBar}>
               <SpringPressable
                 onPress={dismissModal}
                 hitSlop={12}
@@ -554,6 +545,11 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
+    ...Platform.select({
+      web: {
+        cursor: 'pointer',
+      },
+    }),
   },
   addContactPill: {
     flexDirection: 'row',

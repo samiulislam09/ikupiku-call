@@ -191,13 +191,13 @@ export function useSwipeDownToDismiss({
     }
   }, [dismissThreshold, dismissModal, resetPosition]);
 
-  // Dedicated PanResponder for the top grabber pill: claims on start!
+  // Dedicated PanResponder for the top grabber pill: claims on start without capturing children
   const grabberPanResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
-      onStartShouldSetPanResponderCapture: () => true,
+      onStartShouldSetPanResponderCapture: () => false,
       onMoveShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponderCapture: () => true,
+      onMoveShouldSetPanResponderCapture: () => false,
       onPanResponderGrant: () => {
         setIsDragging(true);
       },

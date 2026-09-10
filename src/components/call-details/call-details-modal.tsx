@@ -144,6 +144,7 @@ export function CallDetailsModal({ call, visible, onClose, onDeleteCall }: CallD
                   } as any,
                 }),
               ]}>
+            <View style={styles.headerBar}>
               <SpringPressable
                 scaleTo={0.9}
                 onPress={dismissModal}
@@ -567,6 +568,11 @@ const styles = StyleSheet.create({
     borderRadius: 19,
     justifyContent: 'center',
     alignItems: 'center',
+    ...Platform.select({
+      web: {
+        cursor: 'pointer',
+      },
+    }),
   },
   scrollContent: {
     paddingHorizontal: Spacing.four,
