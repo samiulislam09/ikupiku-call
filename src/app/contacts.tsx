@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import {
     FlatList,
+    Image,
     Platform,
     ScrollView,
     StyleSheet,
@@ -12,12 +13,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ContactDetailsModal, type Contact } from '@/components/contacts/contact-details-modal';
 import { FloatingKeypadButton } from '@/components/keypad/floating-keypad-button';
+import { EditProfileModal } from '@/components/profile/edit-profile-modal';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { AppIcon } from '@/components/ui/app-icon';
 import { SpringPressable } from '@/components/ui/spring-pressable';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useCall } from '@/context/call-context';
+import { useUserProfile } from '@/context/user-profile-context';
 import { useTheme } from '@/hooks/use-theme';
 import { appStorage } from '@/utils/storage';
 
@@ -123,6 +126,8 @@ const MOCK_CONTACTS: Contact[] = [
 export default function ContactsScreen() {
   const theme = useTheme();
   const { startCall } = useCall();
+  const { profile } = useUserProfile();
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
 
@@ -256,6 +261,7 @@ export default function ContactsScreen() {
                 {/* My Card Profile Row */}
                 <SpringPressable
                   scaleTo={0.98}
+                  onPress={() => setIsEditProfileOpen(true)}
                   style={[
                     styles.myCardRow,
                     {
@@ -267,13 +273,21 @@ export default function ContactsScreen() {
                     style={[
                       styles.myCardAvatar,
                       {
-                        backgroundColor: theme.primary,
+                        backgroundColor: profile.avatarColor || theme.primary,
                         borderColor: 'rgba(255, 255, 255, 0.25)',
                       },
                     ]}>
-                    <ThemedText type="smallBold" style={{ color: '#FFFFFF', fontSize: 16 }}>
-                      ME
-                    </ThemedText>
+                    {profile.photoUri ? (
+                      <Image
+                        source={{ uri: profile.photoUri }}
+                        style={styles.myCardAvatarImage}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <ThemedText type="smallBold" style={{ color: '#FFFFFF', fontSize: 16 }}>
+                        {getInitials(profile.name)}
+                      </ThemedText>
+                    )}
                     <View
                       style={[
                         styles.myCardOnlineDot,
@@ -284,7 +298,7 @@ export default function ContactsScreen() {
                   <View style={styles.myCardInfo}>
                     <View style={styles.nameBadgeRow}>
                       <ThemedText type="default" style={styles.contactName}>
-                        Alex Morgan (You)
+                        {profile.name} (You)
                       </ThemedText>
                       <View
                         style={[
@@ -299,7 +313,7 @@ export default function ContactsScreen() {
                       </View>
                     </View>
                     <ThemedText type="small" themeColor="textSecondary">
-                      +1 (555) 019-2831 • HD Voice
+                      {profile.phone} • HD Voice
                     </ThemedText>
                   </View>
                 </SpringPressable>
@@ -489,6 +503,12 @@ export default function ContactsScreen() {
           onDeleteContact={handleDeleteContact}
         />
 
+        {/* Edit My Profile Modal */}
+        <EditProfileModal
+          visible={isEditProfileOpen}
+          onClose={() => setIsEditProfileOpen(false)}
+        />
+
         {/* Floating Keypad Button */}
         <FloatingKeypadButton />
       </SafeAreaView>
@@ -597,6 +617,11 @@ const styles = StyleSheet.create({
     marginRight: Spacing.three,
     position: 'relative',
     borderWidth: 2,
+    overflow: 'hidden',
+  },
+  myCardAvatarImage: {
+    width: '100%',
+    height: '100%',
   },
   myCardOnlineDot: {
     position: 'absolute',

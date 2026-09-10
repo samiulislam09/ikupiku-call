@@ -34,7 +34,8 @@ export type IconName =
   | 'waveform'
   | 'video-off'
   | 'volume-off'
-  | 'check';
+  | 'check'
+  | 'camera';
 
 interface AppIconProps {
   name: IconName;
@@ -203,6 +204,11 @@ const ICON_MAP: Record<IconName, { ios: SFSymbol; android: AndroidSymbol; web: A
     ios: 'checkmark',
     android: 'check',
     web: 'check',
+  },
+  camera: {
+    ios: 'camera.fill',
+    android: 'photo_camera',
+    web: 'photo_camera',
   },
 };
 

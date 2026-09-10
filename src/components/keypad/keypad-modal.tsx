@@ -1,25 +1,30 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import {
     Modal,
     Platform,
+    Pressable,
+    Animated as RNAnimated,
+    ScrollView,
     StyleSheet,
     Text,
-    View
+    View,
 } from 'react-native';
 import Animated, {
     FadeIn,
-    FadeInDown
+    FadeInDown,
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { ContactDetailsModal, type Contact } from '@/components/contacts/contact-details-modal';
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
 import { AppIcon } from '@/components/ui/app-icon';
 import { SpringPressable } from '@/components/ui/spring-pressable';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useCall } from '@/context/call-context';
 import { useKeypad } from '@/context/keypad-context';
+import { useSwipeDownToDismiss } from '@/hooks/use-swipe-down-to-dismiss';
 import { useTheme } from '@/hooks/use-theme';
+import { appStorage } from '@/utils/storage';
 
 interface KeypadKeyConfig {
   digit: string;
@@ -28,7 +33,7 @@ interface KeypadKeyConfig {
 
 const KEYPAD_KEYS: KeypadKeyConfig[][] = [
   [
-    { digit: '1', letters: '' },
+    { digit: '1', letters: '➿' },
     { digit: '2', letters: 'A B C' },
     { digit: '3', letters: 'D E F' },
   ],
@@ -48,6 +53,25 @@ const KEYPAD_KEYS: KeypadKeyConfig[][] = [
     { digit: '#', letters: '' },
   ],
 ];
+
+const T9_MAP: Record<string, string> = {
+  a: '2', b: '2', c: '2',
+  d: '3', e: '3', f: '3',
+  g: '4', h: '4', i: '4',
+  j: '5', k: '5', l: '5',
+  m: '6', n: '6', o: '6',
+  p: '7', q: '7', r: '7', s: '7',
+  t: '8', u: '8', v: '8',
+  w: '9', x: '9', y: '9', z: '9',
+};
+
+function nameToT9(name: string): string {
+  return name
+    .toLowerCase()
+    .split('')
+    .map((char) => T9_MAP[char] || '')
+    .join('');
+}
 
 function DialKey({
   item,
@@ -99,6 +123,23 @@ export function KeypadModal() {
   const theme = useTheme();
   const { startCall } = useCall();
 
+  const [newContactToEdit, setNewContactToEdit] = useState<Contact | null>(null);
+
+  const cleanDigits = dialedNumber.replace(/\D/g, '');
+
+  // T9 contact search matching both numeric digits in phone & letters in name
+  const matchedContacts = useMemo(() => {
+    if (!cleanDigits) return [];
+    const allContacts = appStorage.getJSON<Contact[]>('ilubilu_contacts', []);
+    return allContacts
+      .filter((c) => {
+        const phoneDigits = c.phone.replace(/\D/g, '');
+        const nameT9 = nameToT9(c.name);
+        return phoneDigits.includes(cleanDigits) || nameT9.includes(cleanDigits);
+      })
+      .slice(0, 4);
+  }, [cleanDigits, isKeypadVisible]);
+
   const handlePlaceCall = () => {
     closeKeypad();
     startCall({
@@ -107,6 +148,36 @@ export function KeypadModal() {
       label: 'Mobile',
       avatarColor: theme.primary,
     });
+  };
+
+  const handleCallContact = (contact: Contact) => {
+    closeKeypad();
+    startCall({
+      name: contact.name,
+      number: contact.phone,
+      label: contact.label,
+      avatarColor: contact.avatarColor,
+    });
+  };
+
+  const handleOpenAddContact = () => {
+    const newContact: Contact = {
+      id: 'c_' + Date.now(),
+      name: '',
+      phone: dialedNumber || '+1 ',
+      label: 'Mobile',
+      avatarColor: theme.primary,
+      isFavorite: false,
+    };
+    setNewContactToEdit(newContact);
+  };
+
+  const handleSaveNewContact = (contact: Contact) => {
+    const current = appStorage.getJSON<Contact[]>('ilubilu_contacts', []);
+    const next = [contact, ...current.filter((c) => c.id !== contact.id)];
+    appStorage.setJSON('ilubilu_contacts', next);
+    setNewContactToEdit(null);
+    closeKeypad();
   };
 
   // Format dialed number with spaces
@@ -125,36 +196,77 @@ export function KeypadModal() {
     return `${clean.slice(0, 3)} ${clean.slice(3, 6)} ${clean.slice(6, 10)} ${clean.slice(10)}`;
   }, [dialedNumber]);
 
+  const {
+    panHandlers,
+    animatedStyle,
+    backdropOpacity,
+    isDragging,
+    dismissModal,
+  } = useSwipeDownToDismiss({
+    onClose: closeKeypad,
+    visible: isKeypadVisible,
+  });
+
   return (
     <Modal
       visible={isKeypadVisible}
       animationType="slide"
-      transparent={false}
-      onRequestClose={closeKeypad}>
-      <ThemedView style={styles.modalBackground}>
-        <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={styles.safeArea}>
-          {/* Drag Handle Bar & Close */}
-          <View style={styles.topHandleBar}>
-            <View
-              style={[
-                styles.sheetDragPill,
-                { backgroundColor: theme.border },
-              ]}
-            />
-          </View>
+      transparent={true}
+      onRequestClose={dismissModal}>
+      <RNAnimated.View
+        style={[
+          styles.modalOverlay,
+          {
+            opacity: backdropOpacity,
+          },
+        ]}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={dismissModal} />
 
-          <View style={styles.headerBar}>
-            <SpringPressable
-              onPress={closeKeypad}
-              hitSlop={12}
-              style={[styles.headerCircleBtn, { backgroundColor: theme.backgroundElement }]}>
-              <AppIcon name="close" size={20} color={theme.text} />
-            </SpringPressable>
+        <RNAnimated.View
+          style={[
+            styles.modalBackground,
+            { backgroundColor: theme.background },
+            animatedStyle,
+          ]}>
+          <SafeAreaView
+            edges={Platform.OS === 'ios' ? ['left', 'right', 'bottom'] : ['top', 'left', 'right', 'bottom']}
+            style={styles.safeArea}>
+            {/* Drag Handle Bar & Close */}
+            <View
+              {...panHandlers}
+              style={[
+                styles.topHandleBar,
+                Platform.select({
+                  web: {
+                    cursor: isDragging ? 'grabbing' : 'grab',
+                    userSelect: 'none',
+                  } as any,
+                }),
+              ]}>
+              <View
+                style={[
+                  styles.sheetDragPill,
+                  {
+                    backgroundColor: theme.border,
+                    width: isDragging ? 56 : 42,
+                  },
+                ]}
+              />
+            </View>
+
+            <View {...panHandlers} style={styles.headerBar}>
+              <SpringPressable
+                onPress={dismissModal}
+                hitSlop={12}
+                style={[styles.headerCircleBtn, { backgroundColor: theme.backgroundElement }]}>
+                <AppIcon name="close" size={20} color={theme.text} />
+              </SpringPressable>
 
             {dialedNumber.length > 0 ? (
               <Animated.View entering={FadeIn.duration(200)}>
                 <SpringPressable
-                  onPress={() => {}}
+                  scaleTo={0.92}
+                  onPress={handleOpenAddContact}
                   style={[
                     styles.addContactPill,
                     {
@@ -195,8 +307,58 @@ export function KeypadModal() {
               {formattedNumber || ' '}
             </Text>
 
-            {/* Quick Action Chips when number is typed */}
-            {dialedNumber.length > 0 && (
+            {/* Matched Contacts Bar (T9) or Quick Action Chips */}
+            {matchedContacts.length > 0 ? (
+              <Animated.View
+                entering={FadeInDown.duration(200)}
+                style={styles.suggestionsContainer}>
+                <ThemedText type="smallBold" style={styles.suggestionsTitle} themeColor="textSecondary">
+                  MATCHED CONTACTS ({matchedContacts.length})
+                </ThemedText>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.suggestionsList}>
+                  {matchedContacts.map((contact) => (
+                    <SpringPressable
+                      key={contact.id}
+                      scaleTo={0.94}
+                      onPress={() => handleCallContact(contact)}
+                      style={[
+                        styles.suggestionCard,
+                        {
+                          backgroundColor: theme.card,
+                          borderColor: theme.border,
+                        },
+                      ]}>
+                      <View
+                        style={[
+                          styles.miniContactAvatar,
+                          {
+                            backgroundColor: contact.avatarColor + '20',
+                            borderColor: contact.avatarColor + '40',
+                          },
+                        ]}>
+                        <ThemedText style={[styles.miniAvatarInitial, { color: contact.avatarColor }]}>
+                          {contact.name.slice(0, 1).toUpperCase()}
+                        </ThemedText>
+                      </View>
+                      <View style={styles.suggestionTexts}>
+                        <ThemedText type="smallBold" numberOfLines={1} style={styles.suggestionName}>
+                          {contact.name}
+                        </ThemedText>
+                        <ThemedText type="small" themeColor="textSecondary" numberOfLines={1} style={styles.suggestionPhone}>
+                          {contact.phone}
+                        </ThemedText>
+                      </View>
+                      <View style={[styles.miniCallBadge, { backgroundColor: theme.callGreen + '16' }]}>
+                        <AppIcon name="phone" size={13} color={theme.callGreen} />
+                      </View>
+                    </SpringPressable>
+                  ))}
+                </ScrollView>
+              </Animated.View>
+            ) : dialedNumber.length > 0 ? (
               <Animated.View
                 entering={FadeInDown.duration(200)}
                 style={styles.quickChipsRow}>
@@ -212,16 +374,17 @@ export function KeypadModal() {
                 </SpringPressable>
 
                 <SpringPressable
+                  onPress={handleOpenAddContact}
                   style={[
                     styles.chip,
                     { backgroundColor: theme.backgroundElement, borderColor: theme.border },
                   ]}>
                   <ThemedText type="small" themeColor="textSecondary">
-                    Message
+                    Add to Contacts
                   </ThemedText>
                 </SpringPressable>
               </Animated.View>
-            )}
+            ) : null}
           </View>
 
           {/* 3x4 Dialpad Grid */}
@@ -236,6 +399,14 @@ export function KeypadModal() {
                     onLongPress={() => {
                       if (item.digit === '0') {
                         pressDigit('+');
+                      } else if (item.digit === '1') {
+                        closeKeypad();
+                        startCall({
+                          name: 'Voicemail',
+                          number: '*86',
+                          label: 'Carrier Voicemail',
+                          avatarColor: '#10B981',
+                        });
                       }
                     }}
                   />
@@ -287,15 +458,50 @@ export function KeypadModal() {
               <View style={styles.bottomSideButton} />
             )}
           </View>
-        </SafeAreaView>
-      </ThemedView>
+
+          {/* Contact Edit Modal for Add to Contacts */}
+          <ContactDetailsModal
+            visible={!!newContactToEdit}
+            contact={newContactToEdit}
+            onClose={() => setNewContactToEdit(null)}
+            onSaveContact={handleSaveNewContact}
+          />
+          </SafeAreaView>
+        </RNAnimated.View>
+      </RNAnimated.View>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    justifyContent: 'flex-end',
+  },
   modalBackground: {
     flex: 1,
+    marginTop: Platform.OS === 'ios' ? 44 : 20,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    overflow: 'hidden',
+    width: '100%',
+    maxWidth: MaxContentWidth,
+    alignSelf: 'center',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 16,
+      },
+      android: {
+        elevation: 10,
+      },
+      web: {
+        boxShadow: '0 -8px 32px rgba(0, 0, 0, 0.25)',
+      },
+    }),
   },
   safeArea: {
     flex: 1,
@@ -303,8 +509,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.four,
     paddingBottom: Spacing.three,
-    maxWidth: MaxContentWidth,
-    alignSelf: 'center',
     width: '100%',
   },
   topHandleBar: {
@@ -336,13 +540,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    paddingHorizontal: 12,
     paddingVertical: 6,
-    paddingHorizontal: 14,
-    borderRadius: 18,
+    borderRadius: 16,
     borderWidth: 1,
   },
   keypadTitle: {
-    letterSpacing: 1.5,
+    letterSpacing: 2,
     fontSize: 12,
   },
   headerPlaceholder: {
@@ -350,28 +554,84 @@ const styles = StyleSheet.create({
   },
   displayArea: {
     width: '100%',
-    minHeight: 80,
-    justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: Spacing.four,
-    marginBottom: Spacing.two,
-    gap: 8,
+    justifyContent: 'center',
+    minHeight: 80,
+    gap: Spacing.one,
   },
   numberText: {
-    fontSize: 38,
+    fontSize: 34,
     fontWeight: '700',
-    letterSpacing: 1.5,
+    letterSpacing: -0.5,
     textAlign: 'center',
+    height: 44,
   },
   quickChipsRow: {
     flexDirection: 'row',
     gap: 8,
+    marginTop: 4,
   },
   chip: {
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 12,
     borderWidth: 1,
+  },
+  suggestionsContainer: {
+    width: '100%',
+    maxWidth: 340,
+    marginTop: 4,
+    gap: 4,
+  },
+  suggestionsTitle: {
+    fontSize: 10,
+    letterSpacing: 0.5,
+    textAlign: 'left',
+    paddingHorizontal: 4,
+  },
+  suggestionsList: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingVertical: 2,
+  },
+  suggestionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 14,
+    borderWidth: 1,
+    minWidth: 155,
+  },
+  miniContactAvatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  miniAvatarInitial: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  suggestionTexts: {
+    flex: 1,
+    gap: 1,
+  },
+  suggestionName: {
+    fontSize: 12,
+  },
+  suggestionPhone: {
+    fontSize: 10,
+  },
+  miniCallBadge: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   gridContainer: {
     width: '100%',
@@ -449,21 +709,19 @@ const styles = StyleSheet.create({
     borderRadius: 36,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
     ...Platform.select({
       ios: {
         shadowColor: '#10B981',
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.5,
-        shadowRadius: 14,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.4,
+        shadowRadius: 10,
       },
       android: {
-        elevation: 8,
+        elevation: 6,
       },
       web: {
-        boxShadow: '0 6px 22px rgba(16, 185, 129, 0.45)',
         cursor: 'pointer',
+        boxShadow: '0 4px 18px rgba(16, 185, 129, 0.45)',
       },
     }),
   },

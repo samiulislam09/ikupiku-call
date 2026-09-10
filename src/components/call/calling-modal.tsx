@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import {
     Modal,
     Platform,
@@ -25,10 +25,12 @@ import { SpringPressable } from '@/components/ui/spring-pressable';
 import { Spacing } from '@/constants/theme';
 import { useCall } from '@/context/call-context';
 import { useTheme } from '@/hooks/use-theme';
+import { InCallContactsSheet } from './in-call-contacts-sheet';
 import { InCallKeypad } from './in-call-keypad';
 
 export function CallingModal() {
   const theme = useTheme();
+  const [isInCallContactsOpen, setIsInCallContactsOpen] = useState(false);
   const {
     callStatus,
     caller,
@@ -192,17 +194,36 @@ export function CallingModal() {
             </ThemedText>
           </View>
           <View style={styles.miniDetails}>
-            <ThemedText style={styles.miniName}>{caller.name}</ThemedText>
-            <ThemedText style={styles.miniTimer}>
-              {isOnHold ? 'On Hold' : formattedDuration}
+            <ThemedText style={styles.miniName} numberOfLines={1}>
+              {caller.name}
             </ThemedText>
+            <View style={styles.miniStatusRow}>
+              <View
+                style={[
+                  styles.miniStatusDot,
+                  { backgroundColor: isOnHold ? '#F59E0B' : '#10B981' },
+                ]}
+              />
+              <ThemedText
+                style={[
+                  styles.miniTimer,
+                  isOnHold && { color: '#F59E0B' },
+                ]}>
+                {isOnHold ? 'On Hold' : formattedDuration}
+              </ThemedText>
+            </View>
           </View>
-          <SpringPressable
-            scaleTo={0.88}
-            onPress={endCall}
-            style={styles.miniEndButton}>
-            <AppIcon name="phone-down" size={16} color="#FFFFFF" />
-          </SpringPressable>
+          <View style={styles.miniRightActions}>
+            <View style={styles.miniTapToReturnBadge}>
+              <ThemedText style={styles.miniReturnText}>Tap to open</ThemedText>
+            </View>
+            <SpringPressable
+              scaleTo={0.88}
+              onPress={endCall}
+              style={styles.miniEndButton}>
+              <AppIcon name="phone-down" size={16} color="#FFFFFF" />
+            </SpringPressable>
+          </View>
         </SpringPressable>
       </Animated.View>
     );
@@ -453,7 +474,7 @@ export function CallingModal() {
                   <InCallButton
                     icon="contacts"
                     label="Contacts"
-                    onPress={() => {}}
+                    onPress={() => setIsInCallContactsOpen(true)}
                   />
 
                   {/* Hold */}
@@ -487,6 +508,12 @@ export function CallingModal() {
         {isInCallKeypadOpen && (
           <InCallKeypad onClose={toggleKeypad} />
         )}
+
+        {/* In-Call Contacts Lookup Sheet */}
+        <InCallContactsSheet
+          visible={isInCallContactsOpen}
+          onClose={() => setIsInCallContactsOpen(false)}
+        />
       </View>
     </Modal>
   );
@@ -894,9 +921,35 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
   },
+  miniStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  miniStatusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
   miniTimer: {
     color: '#10B981',
     fontSize: 12,
+    fontWeight: '600',
+  },
+  miniRightActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  miniTapToReturnBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  miniReturnText: {
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: 10,
     fontWeight: '600',
   },
   miniEndButton: {

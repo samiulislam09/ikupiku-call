@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   FlatList,
   Platform,
@@ -19,115 +19,31 @@ import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useCall } from '@/context/call-context';
 import { useTheme } from '@/hooks/use-theme';
 
-const MOCK_CALLS: CallRecord[] = [
-  {
-    id: '1',
-    name: 'Sarah Jenkins',
-    number: '+1 (555) 342-9812',
-    type: 'missed',
-    time: '11:45 AM',
-    section: 'Today',
-    label: 'Mobile',
-    avatarColor: '#F43F5E',
-  },
-  {
-    id: '2',
-    name: 'David Miller',
-    number: '+1 (555) 762-1104',
-    type: 'incoming',
-    time: '10:15 AM',
-    section: 'Today',
-    label: 'Work',
-    duration: '4m 32s',
-    avatarColor: '#3B82F6',
-  },
-  {
-    id: '3',
-    name: '+1 (555) 902-8341',
-    number: '+1 (555) 902-8341',
-    type: 'outgoing',
-    time: '8:20 AM',
-    section: 'Today',
-    label: 'Unknown',
-    duration: '1m 15s',
-    avatarColor: '#8B5CF6',
-  },
-  {
-    id: '4',
-    name: 'Emily Watson',
-    number: '+1 (555) 619-2044',
-    type: 'incoming',
-    time: 'Yesterday',
-    section: 'Yesterday',
-    label: 'Home',
-    duration: '12m 04s',
-    avatarColor: '#10B981',
-  },
-  {
-    id: '5',
-    name: 'Marcus Vance',
-    number: '+1 (555) 441-9032',
-    type: 'missed',
-    time: 'Yesterday',
-    section: 'Yesterday',
-    label: 'Mobile',
-    avatarColor: '#F43F5E',
-  },
-  {
-    id: '6',
-    name: 'Elena Rostova',
-    number: '+1 (555) 883-7120',
-    type: 'outgoing',
-    time: 'Yesterday',
-    section: 'Yesterday',
-    label: 'Mobile',
-    duration: '2m 45s',
-    avatarColor: '#F59E0B',
-  },
-  {
-    id: '7',
-    name: 'Dr. Robert Chen',
-    number: '+1 (555) 234-9081',
-    type: 'incoming',
-    time: 'Oct 12',
-    section: 'Older',
-    label: 'Clinic',
-    duration: '6m 18s',
-    avatarColor: '#06B6D4',
-  },
-  {
-    id: '8',
-    name: 'Olivia Martinez',
-    number: '+1 (555) 489-0199',
-    type: 'outgoing',
-    time: 'Oct 10',
-    section: 'Older',
-    label: 'Mobile',
-    duration: '35s',
-    avatarColor: '#EC4899',
-  },
-];
-
 export default function CallLogsScreen() {
   const theme = useTheme();
-  const { startCall } = useCall();
-  const [filter, setFilter] = useState<'all' | 'missed'>('all');
+  const { startCall, callLogs, deleteCallRecord, clearCallLogs } = useCall();
+  const [filter, setFilter] = useState<'all' | 'missed' | 'outgoing'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [selectedCall, setSelectedCall] = useState<CallRecord | null>(null);
 
-  const filteredCalls = MOCK_CALLS.filter((call) => {
-    if (filter === 'missed' && call.type !== 'missed') {
-      return false;
-    }
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      return (
-        call.name.toLowerCase().includes(q) || call.number.toLowerCase().includes(q)
-      );
-    }
-    return true;
-  });
+  const filteredCalls = useMemo(() => {
+    return callLogs.filter((call) => {
+      if (filter === 'missed' && call.type !== 'missed') {
+        return false;
+      }
+      if (filter === 'outgoing' && call.type !== 'outgoing') {
+        return false;
+      }
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        return (
+          call.name.toLowerCase().includes(q) || call.number.toLowerCase().includes(q)
+        );
+      }
+      return true;
+    });
+  }, [callLogs, filter, searchQuery]);
 
   const getInitials = (name: string) => {
     if (name.startsWith('+')) return '#';
@@ -147,24 +63,26 @@ export default function CallLogsScreen() {
             <ThemedText type="title" style={styles.title}>
               Call Logs
             </ThemedText>
-            <View
-              style={[
-                styles.callCountPill,
-                { backgroundColor: theme.backgroundElement },
-              ]}>
+            <View style={styles.headerRightRow}>
               <View
                 style={[
-                  styles.liveIndicator,
-                  { backgroundColor: theme.callGreen },
-                ]}
-              />
-              <ThemedText type="smallBold" themeColor="textSecondary">
-                {filteredCalls.length} calls
-              </ThemedText>
+                  styles.callCountPill,
+                  { backgroundColor: theme.backgroundElement },
+                ]}>
+                <View
+                  style={[
+                    styles.liveIndicator,
+                    { backgroundColor: theme.callGreen },
+                  ]}
+                />
+                <ThemedText type="smallBold" themeColor="textSecondary">
+                  {filteredCalls.length} calls
+                </ThemedText>
+              </View>
             </View>
           </View>
 
-          {/* Segmented Filter: All vs Missed */}
+          {/* Segmented Filter: All vs Missed vs Outgoing */}
           <View
             style={[
               styles.segmentContainer,
@@ -207,6 +125,26 @@ export default function CallLogsScreen() {
                   fontWeight: filter === 'missed' ? '700' : '500',
                 }}>
                 Missed
+              </ThemedText>
+            </SpringPressable>
+
+            <SpringPressable
+              scaleTo={0.96}
+              onPress={() => setFilter('outgoing')}
+              style={[
+                styles.segmentButton,
+                filter === 'outgoing' && {
+                  backgroundColor: theme.card,
+                  ...styles.activeSegmentShadow,
+                },
+              ]}>
+              <ThemedText
+                type="smallBold"
+                style={{
+                  color: filter === 'outgoing' ? theme.primary : theme.textSecondary,
+                  fontWeight: filter === 'outgoing' ? '700' : '500',
+                }}>
+                Outgoing
               </ThemedText>
             </SpringPressable>
           </View>
@@ -399,6 +337,7 @@ export default function CallLogsScreen() {
           call={selectedCall}
           visible={!!selectedCall}
           onClose={() => setSelectedCall(null)}
+          onDeleteCall={deleteCallRecord}
         />
       </SafeAreaView>
     </ThemedView>
@@ -425,6 +364,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  headerRightRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  clearBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
   },
   title: {
     fontSize: 28,

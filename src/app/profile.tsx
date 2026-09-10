@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
+    Image,
     Platform,
     ScrollView,
     StyleSheet,
@@ -10,6 +11,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FloatingKeypadButton } from '@/components/keypad/floating-keypad-button';
+import { EditProfileModal } from '@/components/profile/edit-profile-modal';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { AppIcon } from '@/components/ui/app-icon';
@@ -17,13 +19,49 @@ import { SpringPressable } from '@/components/ui/spring-pressable';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useCall } from '@/context/call-context';
 import { ThemeMode, useThemeContext } from '@/context/theme-context';
+import { useUserProfile } from '@/context/user-profile-context';
 import { useTheme } from '@/hooks/use-theme';
 import { appStorage } from '@/utils/storage';
+
+function parseDurationSeconds(dur?: string): number {
+  if (!dur || dur === 'Canceled') return 0;
+  let total = 0;
+  const minMatch = dur.match(/(\d+)m/);
+  const secMatch = dur.match(/(\d+)s/);
+  if (minMatch) total += parseInt(minMatch[1], 10) * 60;
+  if (secMatch) total += parseInt(secMatch[1], 10);
+  return total;
+}
+
+function getInitials(name: string): string {
+  if (!name) return 'ME';
+  const parts = name.split(' ');
+  if (parts.length >= 2) {
+    return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+  }
+  return name.slice(0, 2).toUpperCase();
+}
 
 export default function ProfileScreen() {
   const theme = useTheme();
   const { isDark, themeMode, setThemeMode } = useThemeContext();
-  const { receiveIncomingCall } = useCall();
+  const { receiveIncomingCall, callLogs } = useCall();
+  const { profile } = useUserProfile();
+  const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+
+  // Compute calling stats dynamically from call history
+  const totalSeconds = useMemo(() => {
+    return callLogs.reduce((acc, c) => acc + parseDurationSeconds(c.duration), 0);
+  }, [callLogs]);
+
+  const formattedTotalTime = useMemo(() => {
+    const hours = Math.floor(totalSeconds / 3600);
+    const mins = Math.floor((totalSeconds % 3600) / 60);
+    const secs = totalSeconds % 60;
+    if (hours > 0) return `${hours}h ${mins}m`;
+    if (mins > 0) return `${mins}m ${secs}s`;
+    return `${secs}s`;
+  }, [totalSeconds]);
 
   // Persisted toggle states in localStorage
   const [hdVoice, setHdVoiceState] = useState(() =>
@@ -62,15 +100,28 @@ export default function ProfileScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}>
           {/* Header */}
-          <View style={styles.header}>
+          <View style={styles.headerRow}>
             <ThemedText type="title" style={styles.title}>
               Profile
             </ThemedText>
+            <SpringPressable
+              scaleTo={0.92}
+              onPress={() => setIsEditModalVisible(true)}
+              style={[
+                styles.editProfileBtn,
+                { backgroundColor: theme.primary + '18', borderColor: theme.primary + '30' },
+              ]}>
+              <AppIcon name="camera" size={14} color={theme.primary} />
+              <ThemedText type="smallBold" style={{ color: theme.primary }}>
+                Edit Profile
+              </ThemedText>
+            </SpringPressable>
           </View>
 
           {/* User Profile Card with Glowing Aura */}
-          <Animated.View
-            entering={FadeInDown.duration(300).springify()}
+          <SpringPressable
+            scaleTo={0.98}
+            onPress={() => setIsEditModalVisible(true)}
             style={[
               styles.profileCard,
               { backgroundColor: theme.card, borderColor: theme.border },
@@ -79,17 +130,25 @@ export default function ProfileScreen() {
               <View
                 style={[
                   styles.avatarAura,
-                  { backgroundColor: theme.primary + '25' },
+                  { backgroundColor: (profile.avatarColor || theme.primary) + '25' },
                 ]}
               />
               <View
                 style={[
                   styles.avatarLarge,
-                  { backgroundColor: theme.primary },
+                  { backgroundColor: profile.avatarColor || theme.primary },
                 ]}>
-                <ThemedText type="subtitle" style={styles.avatarText}>
-                  AM
-                </ThemedText>
+                {profile.photoUri ? (
+                  <Image
+                    source={{ uri: profile.photoUri }}
+                    style={styles.profileAvatarImage}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <ThemedText type="subtitle" style={styles.avatarText}>
+                    {getInitials(profile.name)}
+                  </ThemedText>
+                )}
                 <View
                   style={[
                     styles.onlineBadge,
@@ -97,14 +156,26 @@ export default function ProfileScreen() {
                   ]}
                 />
               </View>
+
+              {/* Camera Icon Badge */}
+              <View style={[styles.avatarCameraBadge, { backgroundColor: theme.primary }]}>
+                <AppIcon name="camera" size={11} color="#FFFFFF" />
+              </View>
             </View>
 
             <View style={styles.profileInfo}>
-              <ThemedText type="subtitle" style={styles.userName}>
-                Alex Morgan
-              </ThemedText>
+              <View style={styles.nameEditRow}>
+                <ThemedText type="subtitle" style={styles.userName}>
+                  {profile.name}
+                </ThemedText>
+                <View style={[styles.editPillSmall, { backgroundColor: theme.primary + '14' }]}>
+                  <ThemedText style={{ color: theme.primary, fontSize: 11, fontWeight: '700' }}>
+                    Edit
+                  </ThemedText>
+                </View>
+              </View>
               <ThemedText type="default" themeColor="textSecondary">
-                +1 (555) 019-2831
+                {profile.phone}
               </ThemedText>
 
               <View
@@ -125,6 +196,54 @@ export default function ProfileScreen() {
                   Connected • HD Audio • 18ms
                 </ThemedText>
               </View>
+            </View>
+          </SpringPressable>
+
+          {/* Section: Calling Statistics */}
+          <Animated.View
+            entering={FadeInDown.delay(50).springify()}
+            style={[
+              styles.statsContainer,
+              { backgroundColor: theme.card, borderColor: theme.border },
+            ]}>
+            <View style={styles.statItem}>
+              <View style={[styles.statIconCircle, { backgroundColor: theme.callGreen + '16' }]}>
+                <AppIcon name="clock" size={16} color={theme.callGreen} />
+              </View>
+              <ThemedText style={styles.statValue}>
+                {formattedTotalTime}
+              </ThemedText>
+              <ThemedText type="small" themeColor="textSecondary" style={styles.statLabel}>
+                Talk Time
+              </ThemedText>
+            </View>
+
+            <View style={[styles.statDivider, { backgroundColor: theme.border }]} />
+
+            <View style={styles.statItem}>
+              <View style={[styles.statIconCircle, { backgroundColor: theme.primary + '16' }]}>
+                <AppIcon name="phone" size={16} color={theme.primary} />
+              </View>
+              <ThemedText style={styles.statValue}>
+                {callLogs.length}
+              </ThemedText>
+              <ThemedText type="small" themeColor="textSecondary" style={styles.statLabel}>
+                Total Calls
+              </ThemedText>
+            </View>
+
+            <View style={[styles.statDivider, { backgroundColor: theme.border }]} />
+
+            <View style={styles.statItem}>
+              <View style={[styles.statIconCircle, { backgroundColor: theme.callRed + '16' }]}>
+                <AppIcon name="block" size={16} color={theme.callRed} />
+              </View>
+              <ThemedText style={styles.statValue}>
+                {spamBlocker ? '14' : '0'}
+              </ThemedText>
+              <ThemedText type="small" themeColor="textSecondary" style={styles.statLabel}>
+                Spam Blocked
+              </ThemedText>
             </View>
           </Animated.View>
 
@@ -483,6 +602,79 @@ export default function ProfileScreen() {
             </View>
           </Animated.View>
 
+          {/* Section: VoIP Network Diagnostics */}
+          <Animated.View
+            entering={FadeInDown.delay(300).springify()}
+            style={styles.section}>
+            <ThemedText
+              type="smallBold"
+              style={styles.sectionTitle}
+              themeColor="textSecondary">
+              VOIP NETWORK & AUDIO DIAGNOSTICS
+            </ThemedText>
+
+            <View
+              style={[
+                styles.groupCard,
+                { backgroundColor: theme.card, borderColor: theme.border },
+              ]}>
+              {/* Protocol */}
+              <View style={styles.diagnosticsRow}>
+                <ThemedText type="small" themeColor="textSecondary">
+                  Protocol
+                </ThemedText>
+                <ThemedText type="smallBold">
+                  WebRTC / SIP over TLS
+                </ThemedText>
+              </View>
+              <View style={[styles.divider, { backgroundColor: theme.border }]} />
+
+              {/* Codec */}
+              <View style={styles.diagnosticsRow}>
+                <ThemedText type="small" themeColor="textSecondary">
+                  Audio Codec
+                </ThemedText>
+                <ThemedText type="smallBold" style={{ color: theme.callGreen }}>
+                  Opus HD • 48 kHz
+                </ThemedText>
+              </View>
+              <View style={[styles.divider, { backgroundColor: theme.border }]} />
+
+              {/* Latency */}
+              <View style={styles.diagnosticsRow}>
+                <ThemedText type="small" themeColor="textSecondary">
+                  Round-Trip Latency
+                </ThemedText>
+                <View style={styles.diagValueRow}>
+                  <View style={[styles.pingDot, { backgroundColor: theme.callGreen }]} />
+                  <ThemedText type="smallBold">18 ms (Optimal)</ThemedText>
+                </View>
+              </View>
+              <View style={[styles.divider, { backgroundColor: theme.border }]} />
+
+              {/* Jitter & Loss */}
+              <View style={styles.diagnosticsRow}>
+                <ThemedText type="small" themeColor="textSecondary">
+                  Jitter & Packet Loss
+                </ThemedText>
+                <ThemedText type="smallBold">
+                  1.2 ms • 0.0% loss
+                </ThemedText>
+              </View>
+              <View style={[styles.divider, { backgroundColor: theme.border }]} />
+
+              {/* Encryption */}
+              <View style={styles.diagnosticsRow}>
+                <ThemedText type="small" themeColor="textSecondary">
+                  Encryption
+                </ThemedText>
+                <ThemedText type="smallBold">
+                  SRTP / AES-128 GCM
+                </ThemedText>
+              </View>
+            </View>
+          </Animated.View>
+
           {/* App Footer Info */}
           <View style={styles.footer}>
             <ThemedText type="small" themeColor="textSecondary" style={styles.footerText}>
@@ -493,6 +685,12 @@ export default function ProfileScreen() {
             </ThemedText>
           </View>
         </ScrollView>
+
+        {/* Edit Profile Modal */}
+        <EditProfileModal
+          visible={isEditModalVisible}
+          onClose={() => setIsEditModalVisible(false)}
+        />
 
         {/* Floating Keypad Button */}
         <FloatingKeypadButton />
@@ -515,6 +713,21 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 84,
     paddingTop: Spacing.two,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingBottom: Spacing.two,
+  },
+  editProfileBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 14,
+    borderWidth: 1,
   },
   header: {
     paddingBottom: Spacing.two,
@@ -567,6 +780,33 @@ const styles = StyleSheet.create({
     position: 'relative',
     borderWidth: 2.5,
     borderColor: 'rgba(255, 255, 255, 0.3)',
+    overflow: 'hidden',
+  },
+  profileAvatarImage: {
+    width: '100%',
+    height: '100%',
+  },
+  avatarCameraBadge: {
+    position: 'absolute',
+    right: -2,
+    bottom: -2,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+  },
+  nameEditRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  editPillSmall: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
   },
   avatarText: {
     color: '#FFFFFF',
@@ -721,5 +961,71 @@ const styles = StyleSheet.create({
   },
   footerSubText: {
     fontSize: 12,
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    borderRadius: 18,
+    borderWidth: 1,
+    paddingVertical: Spacing.three,
+    paddingHorizontal: Spacing.two,
+    marginBottom: Spacing.four,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.04,
+        shadowRadius: 6,
+      },
+      android: {
+        elevation: 1,
+      },
+      web: {
+        boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
+      },
+    }),
+  },
+  statItem: {
+    alignItems: 'center',
+    flex: 1,
+    gap: 4,
+  },
+  statIconCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statValue: {
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: -0.2,
+  },
+  statLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  statDivider: {
+    width: 1,
+    height: 36,
+  },
+  diagnosticsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.three,
+    paddingVertical: 12,
+  },
+  diagValueRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  pingDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
   },
 });

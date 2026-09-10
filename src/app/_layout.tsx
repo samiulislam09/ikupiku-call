@@ -9,6 +9,8 @@ import { CallProvider } from '@/context/call-context';
 import { KeypadProvider } from '@/context/keypad-context';
 import { ThemeProviderCustom, useThemeContext } from '@/context/theme-context';
 
+import { UserProfileProvider } from '@/context/user-profile-context';
+
 SplashScreen.preventAutoHideAsync();
 
 function RootLayoutContent() {
@@ -16,14 +18,16 @@ function RootLayoutContent() {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <CallProvider>
-        <KeypadProvider>
-          <AnimatedSplashOverlay />
-          <AppTabs />
-          <KeypadModal />
-          <CallingModal />
-        </KeypadProvider>
-      </CallProvider>
+      <UserProfileProvider>
+        <CallProvider>
+          <KeypadProvider>
+            <AnimatedSplashOverlay />
+            <AppTabs />
+            <KeypadModal />
+            <CallingModal />
+          </KeypadProvider>
+        </CallProvider>
+      </UserProfileProvider>
     </ThemeProvider>
   );
 }

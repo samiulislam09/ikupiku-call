@@ -1,6 +1,8 @@
 import {
     Modal,
     Platform,
+    Pressable,
+    Animated as RNAnimated,
     ScrollView,
     StyleSheet,
     View,
@@ -9,34 +11,36 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
 import { AppIcon } from '@/components/ui/app-icon';
 import { SpringPressable } from '@/components/ui/spring-pressable';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
-import { useCall } from '@/context/call-context';
+import { type CallRecord, useCall } from '@/context/call-context';
+import { useSwipeDownToDismiss } from '@/hooks/use-swipe-down-to-dismiss';
 import { useTheme } from '@/hooks/use-theme';
 
-export interface CallRecord {
-  id: string;
-  name: string;
-  number: string;
-  type: 'incoming' | 'outgoing' | 'missed';
-  time: string;
-  section: 'Today' | 'Yesterday' | 'Older';
-  label: string;
-  duration?: string;
-  avatarColor: string;
-}
+export type { CallRecord };
 
 interface CallDetailsModalProps {
   call: CallRecord | null;
   visible: boolean;
   onClose: () => void;
+  onDeleteCall?: (id: string) => void;
 }
 
-export function CallDetailsModal({ call, visible, onClose }: CallDetailsModalProps) {
+export function CallDetailsModal({ call, visible, onClose, onDeleteCall }: CallDetailsModalProps) {
   const theme = useTheme();
   const { startCall, receiveIncomingCall } = useCall();
+
+  const {
+    panHandlers,
+    animatedStyle,
+    backdropOpacity,
+    isDragging,
+    dismissModal,
+  } = useSwipeDownToDismiss({
+    onClose,
+    visible,
+  });
 
   if (!call) return null;
 
@@ -75,38 +79,77 @@ export function CallDetailsModal({ call, visible, onClose }: CallDetailsModalPro
     <Modal
       visible={visible}
       animationType="slide"
-      transparent={false}
-      onRequestClose={onClose}>
-      <ThemedView style={styles.container}>
-        <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={styles.safeArea}>
-          {/* Top Bar */}
-          <View style={styles.headerBar}>
-            <SpringPressable
-              scaleTo={0.9}
-              onPress={onClose}
-              hitSlop={12}
-              style={[
-                styles.iconCircleButton,
-                { backgroundColor: theme.backgroundElement },
-              ]}>
-              <AppIcon name="back" size={20} color={theme.text} />
-            </SpringPressable>
+      transparent={true}
+      onRequestClose={dismissModal}>
+      <RNAnimated.View
+        style={[
+          styles.modalOverlay,
+          {
+            opacity: backdropOpacity,
+          },
+        ]}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={dismissModal} />
 
-            <ThemedText type="smallBold" style={styles.headerTitle}>
-              Call Details
-            </ThemedText>
-
-            <SpringPressable
-              scaleTo={0.9}
-              onPress={() => {}}
-              hitSlop={12}
+        <RNAnimated.View
+          style={[
+            styles.container,
+            { backgroundColor: theme.background },
+            animatedStyle,
+          ]}>
+          <SafeAreaView
+            edges={Platform.OS === 'ios' ? ['left', 'right', 'bottom'] : ['top', 'left', 'right', 'bottom']}
+            style={styles.safeArea}>
+            {/* Top Drag Handle Bar */}
+            <View
+              {...panHandlers}
               style={[
-                styles.iconCircleButton,
-                { backgroundColor: theme.backgroundElement },
+                styles.dragBar,
+                Platform.select({
+                  web: {
+                    cursor: isDragging ? 'grabbing' : 'grab',
+                    userSelect: 'none',
+                  } as any,
+                }),
               ]}>
-              <AppIcon name="share" size={18} color={theme.text} />
-            </SpringPressable>
-          </View>
+              <View
+                style={[
+                  styles.dragPill,
+                  {
+                    backgroundColor: theme.border,
+                    width: isDragging ? 52 : 36,
+                  },
+                ]}
+              />
+            </View>
+
+            {/* Top Bar */}
+            <View {...panHandlers} style={styles.headerBar}>
+              <SpringPressable
+                scaleTo={0.9}
+                onPress={dismissModal}
+                hitSlop={12}
+                style={[
+                  styles.iconCircleButton,
+                  { backgroundColor: theme.backgroundElement },
+                ]}>
+                <AppIcon name="back" size={20} color={theme.text} />
+              </SpringPressable>
+
+              <ThemedText type="smallBold" style={styles.headerTitle}>
+                Call Details
+              </ThemedText>
+
+              <SpringPressable
+                scaleTo={0.9}
+                onPress={() => {}}
+                hitSlop={12}
+                style={[
+                  styles.iconCircleButton,
+                  { backgroundColor: theme.backgroundElement },
+                ]}>
+                <AppIcon name="share" size={18} color={theme.text} />
+              </SpringPressable>
+            </View>
 
           <ScrollView
             showsVerticalScrollIndicator={false}
@@ -405,24 +448,83 @@ export function CallDetailsModal({ call, visible, onClose }: CallDetailsModalPro
                     </ThemedText>
                   </View>
                 </SpringPressable>
+
+                <View style={[styles.divider, { backgroundColor: theme.border }]} />
+
+                {/* Delete Call Record */}
+                <SpringPressable
+                  scaleTo={0.98}
+                  onPress={() => {
+                    if (onDeleteCall && call) {
+                      onDeleteCall(call.id);
+                    }
+                    onClose();
+                  }}
+                  style={styles.menuRow}>
+                  <View style={styles.menuRowLeft}>
+                    <AppIcon name="close" size={18} color={theme.callRed} />
+                    <ThemedText
+                      type="default"
+                      style={[styles.menuRowText, { color: theme.callRed, fontWeight: '700' }]}>
+                      Delete from Call History
+                    </ThemedText>
+                  </View>
+                </SpringPressable>
               </View>
             </Animated.View>
           </ScrollView>
-        </SafeAreaView>
-      </ThemedView>
+          </SafeAreaView>
+        </RNAnimated.View>
+      </RNAnimated.View>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    justifyContent: 'flex-end',
+  },
   container: {
     flex: 1,
+    marginTop: Platform.OS === 'ios' ? 44 : 20,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    overflow: 'hidden',
+    width: '100%',
+    maxWidth: MaxContentWidth,
+    alignSelf: 'center',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 16,
+      },
+      android: {
+        elevation: 10,
+      },
+      web: {
+        boxShadow: '0 -8px 32px rgba(0, 0, 0, 0.25)',
+      },
+    }),
   },
   safeArea: {
     flex: 1,
-    maxWidth: MaxContentWidth,
-    alignSelf: 'center',
     width: '100%',
+  },
+  dragBar: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: Spacing.two,
+    paddingBottom: Spacing.one,
+    width: '100%',
+    minHeight: 24,
+  },
+  dragPill: {
+    height: 5,
+    borderRadius: 2.5,
   },
   headerBar: {
     flexDirection: 'row',

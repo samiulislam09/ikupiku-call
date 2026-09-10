@@ -1,20 +1,23 @@
 import React, { useState } from 'react';
 import {
     Modal,
+    Platform,
+    Pressable,
+    Animated as RNAnimated,
     ScrollView,
     StyleSheet,
     TextInput,
-    View
+    View,
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
 import { AppIcon } from '@/components/ui/app-icon';
 import { SpringPressable } from '@/components/ui/spring-pressable';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useCall } from '@/context/call-context';
+import { useSwipeDownToDismiss } from '@/hooks/use-swipe-down-to-dismiss';
 import { useTheme } from '@/hooks/use-theme';
 
 export interface Contact {
@@ -81,6 +84,24 @@ export function ContactDetailsModal({
     }
   }, [contact]);
 
+  const handleDismiss = () => {
+    if (isEditing) {
+      setIsEditing(false);
+    }
+    onClose();
+  };
+
+  const {
+    panHandlers,
+    animatedStyle,
+    backdropOpacity,
+    isDragging,
+    dismissModal,
+  } = useSwipeDownToDismiss({
+    onClose: handleDismiss,
+    visible,
+  });
+
   if (!contact) return null;
 
   const getInitials = (n: string) => {
@@ -126,38 +147,77 @@ export function ContactDetailsModal({
     <Modal
       visible={visible}
       animationType="slide"
-      transparent={false}
-      onRequestClose={onClose}>
-      <ThemedView style={styles.container}>
-        <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={styles.safeArea}>
-          {/* Header Bar */}
-          <View style={styles.header}>
-            <SpringPressable
-              scaleTo={0.92}
-              onPress={() => {
-                if (isEditing) {
-                  setIsEditing(false);
-                } else {
-                  onClose();
-                }
-              }}
+      transparent={true}
+      onRequestClose={dismissModal}>
+      <RNAnimated.View
+        style={[
+          styles.modalOverlay,
+          {
+            opacity: backdropOpacity,
+          },
+        ]}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={dismissModal} />
+
+        <RNAnimated.View
+          style={[
+            styles.container,
+            { backgroundColor: theme.background },
+            animatedStyle,
+          ]}>
+          <SafeAreaView
+            edges={Platform.OS === 'ios' ? ['left', 'right', 'bottom'] : ['top', 'left', 'right', 'bottom']}
+            style={styles.safeArea}>
+            {/* Top Drag Handle Bar */}
+            <View
+              {...panHandlers}
               style={[
-                styles.headerButton,
-                { backgroundColor: theme.backgroundElement },
+                styles.dragBar,
+                Platform.select({
+                  web: {
+                    cursor: isDragging ? 'grabbing' : 'grab',
+                    userSelect: 'none',
+                  } as any,
+                }),
               ]}>
-              <AppIcon
-                name={isEditing ? 'close' : 'back'}
-                size={20}
-                color={theme.text}
+              <View
+                style={[
+                  styles.dragPill,
+                  {
+                    backgroundColor: theme.border,
+                    width: isDragging ? 52 : 36,
+                  },
+                ]}
               />
-            </SpringPressable>
+            </View>
 
-            <ThemedText type="subtitle" style={styles.headerTitle}>
-              {isEditing ? 'Edit Contact' : 'Contact Details'}
-            </ThemedText>
-
-            {isEditing ? (
+            {/* Header Bar */}
+            <View {...panHandlers} style={styles.header}>
               <SpringPressable
+                scaleTo={0.92}
+                onPress={() => {
+                  if (isEditing) {
+                    setIsEditing(false);
+                  } else {
+                    dismissModal();
+                  }
+                }}
+                style={[
+                  styles.headerButton,
+                  { backgroundColor: theme.backgroundElement },
+                ]}>
+                <AppIcon
+                  name={isEditing ? 'close' : 'back'}
+                  size={20}
+                  color={theme.text}
+                />
+              </SpringPressable>
+
+              <ThemedText type="subtitle" style={styles.headerTitle}>
+                {isEditing ? 'Edit Contact' : 'Contact Details'}
+              </ThemedText>
+
+              {isEditing ? (
+                <SpringPressable
                 scaleTo={0.92}
                 onPress={handleSave}
                 style={[
@@ -605,21 +665,58 @@ export function ContactDetailsModal({
               </Animated.View>
             )}
           </ScrollView>
-        </SafeAreaView>
-      </ThemedView>
+          </SafeAreaView>
+        </RNAnimated.View>
+      </RNAnimated.View>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    justifyContent: 'flex-end',
+  },
   container: {
     flex: 1,
+    marginTop: Platform.OS === 'ios' ? 44 : 20,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    overflow: 'hidden',
+    width: '100%',
+    maxWidth: MaxContentWidth,
+    alignSelf: 'center',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 16,
+      },
+      android: {
+        elevation: 10,
+      },
+      web: {
+        boxShadow: '0 -8px 32px rgba(0, 0, 0, 0.25)',
+      },
+    }),
   },
   safeArea: {
     flex: 1,
-    maxWidth: MaxContentWidth,
-    alignSelf: 'center',
     width: '100%',
+  },
+  dragBar: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: Spacing.two,
+    paddingBottom: Spacing.one,
+    width: '100%',
+    minHeight: 24,
+  },
+  dragPill: {
+    height: 5,
+    borderRadius: 2.5,
   },
   header: {
     flexDirection: 'row',
