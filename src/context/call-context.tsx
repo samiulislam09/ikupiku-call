@@ -11,8 +11,8 @@ import React, {
 import {
     ACTION_ANSWER,
     ACTION_DECLINE,
-    DEFAULT_ACTION_IDENTIFIER,
     addNotificationResponseListener,
+    DEFAULT_ACTION_IDENTIFIER,
     dismissIncomingCallNotification,
     getLastNotificationResponse,
     IncomingCallPayload,

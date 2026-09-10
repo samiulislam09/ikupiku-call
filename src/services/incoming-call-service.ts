@@ -1,6 +1,6 @@
-import { Platform } from 'react-native';
 import { isRunningInExpoGo } from 'expo';
 import type * as Notifications from 'expo-notifications';
+import { Platform } from 'react-native';
 
 export const INCOMING_CALL_CATEGORY = 'incoming_call';
 export const ACTION_ANSWER = 'ANSWER_ACTION';
