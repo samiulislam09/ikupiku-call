@@ -10,6 +10,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CallDetailsModal, type CallRecord } from '@/components/call-details/call-details-modal';
+import { SimulateCallModal } from '@/components/call/simulate-call-modal';
 import { FloatingKeypadButton } from '@/components/keypad/floating-keypad-button';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -26,6 +27,7 @@ export default function CallLogsScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [selectedCall, setSelectedCall] = useState<CallRecord | null>(null);
+  const [isSimulateModalOpen, setIsSimulateModalOpen] = useState(false);
 
   const filteredCalls = useMemo(() => {
     return callLogs.filter((call) => {
@@ -64,6 +66,22 @@ export default function CallLogsScreen() {
               Call Logs
             </ThemedText>
             <View style={styles.headerRightRow}>
+              <SpringPressable
+                scaleTo={0.92}
+                onPress={() => setIsSimulateModalOpen(true)}
+                style={[
+                  styles.testCallBtn,
+                  {
+                    backgroundColor: theme.primary + '16',
+                    borderColor: theme.primary + '35',
+                  },
+                ]}>
+                <AppIcon name="phone" size={13} color={theme.primary} />
+                <ThemedText style={[styles.testCallText, { color: theme.primary }]}>
+                  Test Call
+                </ThemedText>
+              </SpringPressable>
+
               <View
                 style={[
                   styles.callCountPill,
@@ -339,6 +357,12 @@ export default function CallLogsScreen() {
           onClose={() => setSelectedCall(null)}
           onDeleteCall={deleteCallRecord}
         />
+
+        {/* Closed-App / Background Call Simulator Modal */}
+        <SimulateCallModal
+          visible={isSimulateModalOpen}
+          onClose={() => setIsSimulateModalOpen(false)}
+        />
       </SafeAreaView>
     </ThemedView>
   );
@@ -369,6 +393,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+  },
+  testCallBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  testCallText: {
+    fontSize: 12,
+    fontWeight: '700',
   },
   clearBtn: {
     paddingHorizontal: 10,

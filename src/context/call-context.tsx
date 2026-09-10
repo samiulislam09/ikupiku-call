@@ -6,7 +6,17 @@ import React, {
     useRef,
     useState,
 } from 'react';
+import * as Linking from 'expo-linking';
+import * as Notifications from 'expo-notifications';
 
+import {
+    ACTION_ANSWER,
+    ACTION_DECLINE,
+    dismissIncomingCallNotification,
+    IncomingCallPayload,
+    scheduleIncomingCallNotification,
+    setupIncomingCallNotifications,
+} from '@/services/incoming-call-service';
 import { appStorage } from '@/utils/storage';
 
 export type CallStatus = 'idle' | 'incoming' | 'outgoing' | 'connected' | 'ended';
@@ -161,6 +171,7 @@ interface CallContextType {
   deleteCallRecord: (id: string) => void;
   clearCallLogs: () => void;
   addCustomCallRecord: (record: Omit<CallRecord, 'id'>) => void;
+  scheduleTestIncomingCall: (delaySeconds?: number, caller?: Partial<CallerInfo>) => Promise<string>;
 }
 
 const CallContext = createContext<CallContextType | null>(null);
@@ -327,6 +338,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
 
   // Accept incoming call
   const acceptCall = useCallback(() => {
+    dismissIncomingCallNotification();
     clearTimers();
     setCallStatus('connected');
     setDuration(0);
@@ -335,6 +347,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
 
   // Decline incoming call
   const declineCall = useCallback(() => {
+    dismissIncomingCallNotification();
     clearTimers();
     // Record missed/declined call in call history
     addCallRecordInternal({
@@ -356,6 +369,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
 
   // End active or outgoing call
   const endCall = useCallback(() => {
+    dismissIncomingCallNotification();
     clearTimers();
     const currentDur = durationRef.current;
     if (callStatus === 'connected') {
@@ -390,6 +404,143 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       resetCallState();
     }, 700);
   }, [clearTimers, callStatus, caller, addCallRecordInternal, resetCallState]);
+
+  // Handle an answered or declined notification
+  const handleIncomingCallNotificationResponse = useCallback(
+    (response: Notifications.NotificationResponse) => {
+      const actionId = response.actionIdentifier;
+      const data = response.notification.request.content.data as Partial<IncomingCallPayload> | undefined;
+
+      if (data && data.type === 'incoming_call') {
+        const callerInfo: CallerInfo = {
+          name: data.name || DEFAULT_CALLER.name,
+          number: data.number || DEFAULT_CALLER.number,
+          label: data.label || 'Mobile',
+          avatarColor: data.avatarColor || '#208AEF',
+        };
+
+        if (
+          actionId === ACTION_ANSWER ||
+          actionId === Notifications.DEFAULT_ACTION_IDENTIFIER
+        ) {
+          // User picked up or tapped the notification to answer
+          dismissIncomingCallNotification();
+          resetCallState();
+          initialDirectionRef.current = 'incoming';
+          setCaller(callerInfo);
+          setCallStatus('connected');
+        } else if (actionId === ACTION_DECLINE) {
+          // User declined from notification
+          dismissIncomingCallNotification();
+          addCallRecordInternal({
+            name: callerInfo.name,
+            number: callerInfo.number,
+            type: 'missed',
+            time: formatCurrentTime(),
+            section: 'Today',
+            label: callerInfo.label || 'Mobile',
+            avatarColor: callerInfo.avatarColor || '#F43F5E',
+            timestamp: Date.now(),
+          });
+        }
+      }
+    },
+    [addCallRecordInternal, resetCallState]
+  );
+
+  // Handle incoming deep link URLs (e.g. ilubilucall://call?action=answer&name=...)
+  const handleDeepLinkUrl = useCallback(
+    (url: string) => {
+      try {
+        const parsed = Linking.parse(url);
+        if (parsed.path === 'call' || parsed.hostname === 'call') {
+          const action = parsed.queryParams?.action;
+          const name = (parsed.queryParams?.name as string) || DEFAULT_CALLER.name;
+          const number = (parsed.queryParams?.number as string) || DEFAULT_CALLER.number;
+          const label = (parsed.queryParams?.label as string) || 'Mobile';
+          const avatarColor = (parsed.queryParams?.avatarColor as string) || '#208AEF';
+
+          const callerInfo: CallerInfo = { name, number, label, avatarColor };
+
+          if (action === 'answer') {
+            dismissIncomingCallNotification();
+            resetCallState();
+            initialDirectionRef.current = 'incoming';
+            setCaller(callerInfo);
+            setCallStatus('connected');
+          } else if (action === 'incoming') {
+            receiveIncomingCall(callerInfo);
+          } else if (action === 'decline') {
+            dismissIncomingCallNotification();
+            addCallRecordInternal({
+              name: callerInfo.name,
+              number: callerInfo.number,
+              type: 'missed',
+              time: formatCurrentTime(),
+              section: 'Today',
+              label: callerInfo.label || 'Mobile',
+              avatarColor: callerInfo.avatarColor || '#F43F5E',
+              timestamp: Date.now(),
+            });
+          }
+        }
+      } catch (err) {
+        console.warn('[CallContext] Error handling deep link:', err);
+      }
+    },
+    [addCallRecordInternal, receiveIncomingCall, resetCallState]
+  );
+
+  // Cold-start & runtime listeners for notifications and deep links
+  useEffect(() => {
+    // 1. Initialize notification channels and categories
+    setupIncomingCallNotifications();
+
+    // 2. Check cold start notification response (app was closed/killed and user tapped Answer/notification)
+    Notifications.getLastNotificationResponseAsync().then((response) => {
+      if (response) {
+        handleIncomingCallNotificationResponse(response);
+      }
+    });
+
+    // 3. Check cold start deep link
+    Linking.getInitialURL().then((initialUrl) => {
+      if (initialUrl) {
+        handleDeepLinkUrl(initialUrl);
+      }
+    });
+
+    // 4. Runtime listener for notification responses (app backgrounded or in foreground)
+    const notifSubscription = Notifications.addNotificationResponseReceivedListener(
+      (response) => {
+        handleIncomingCallNotificationResponse(response);
+      }
+    );
+
+    // 5. Runtime listener for incoming deep links
+    const linkSubscription = Linking.addEventListener('url', ({ url }) => {
+      handleDeepLinkUrl(url);
+    });
+
+    return () => {
+      notifSubscription.remove();
+      linkSubscription.remove();
+    };
+  }, [handleIncomingCallNotificationResponse, handleDeepLinkUrl]);
+
+  // Schedule a test incoming call with delay (to test closed/backgrounded app)
+  const scheduleTestIncomingCall = useCallback(
+    async (delaySeconds: number = 5, testCaller?: Partial<CallerInfo>) => {
+      const targetCaller = {
+        name: testCaller?.name || DEFAULT_CALLER.name,
+        number: testCaller?.number || DEFAULT_CALLER.number,
+        label: testCaller?.label || DEFAULT_CALLER.label,
+        avatarColor: testCaller?.avatarColor || DEFAULT_CALLER.avatarColor,
+      };
+      return await scheduleIncomingCallNotification(targetCaller, delaySeconds);
+    },
+    []
+  );
 
   const toggleMute = useCallback(() => setIsMuted((v) => !v), []);
   const toggleSpeaker = useCallback(() => setIsSpeakerOn((v) => !v), []);
@@ -428,6 +579,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         deleteCallRecord,
         clearCallLogs,
         addCustomCallRecord,
+        scheduleTestIncomingCall,
       }}>
       {children}
     </CallContext.Provider>
