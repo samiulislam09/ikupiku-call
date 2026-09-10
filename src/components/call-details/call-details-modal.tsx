@@ -1,10 +1,9 @@
-import React from 'react';
 import {
-  Modal,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  View,
+    Modal,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    View,
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -14,6 +13,7 @@ import { ThemedView } from '@/components/themed-view';
 import { AppIcon } from '@/components/ui/app-icon';
 import { SpringPressable } from '@/components/ui/spring-pressable';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
+import { useCall } from '@/context/call-context';
 import { useTheme } from '@/hooks/use-theme';
 
 export interface CallRecord {
@@ -36,6 +36,7 @@ interface CallDetailsModalProps {
 
 export function CallDetailsModal({ call, visible, onClose }: CallDetailsModalProps) {
   const theme = useTheme();
+  const { startCall, receiveIncomingCall } = useCall();
 
   if (!call) return null;
 
@@ -161,7 +162,15 @@ export function CallDetailsModal({ call, visible, onClose }: CallDetailsModalPro
                 <View style={styles.actionItem}>
                   <SpringPressable
                     scaleTo={0.9}
-                    onPress={() => {}}
+                    onPress={() => {
+                      onClose();
+                      startCall({
+                        name: call.name,
+                        number: call.number,
+                        label: call.label,
+                        avatarColor: call.avatarColor,
+                      });
+                    }}
                     style={[
                       styles.actionCircleBtn,
                       { backgroundColor: theme.callGreen },
@@ -340,6 +349,40 @@ export function CallDetailsModal({ call, visible, onClose }: CallDetailsModalPro
                   styles.groupCard,
                   { backgroundColor: theme.card, borderColor: theme.border },
                 ]}>
+                {/* Simulate Incoming Call */}
+                <SpringPressable
+                  scaleTo={0.98}
+                  onPress={() => {
+                    onClose();
+                    receiveIncomingCall({
+                      name: call.name,
+                      number: call.number,
+                      label: call.label,
+                      avatarColor: call.avatarColor,
+                    });
+                  }}
+                  style={styles.menuRow}>
+                  <View style={styles.menuRowLeft}>
+                    <AppIcon name="phone-incoming" size={18} color={theme.callGreen} />
+                    <ThemedText type="default" style={[styles.menuRowText, { color: theme.callGreen, fontWeight: '700' }]}>
+                      Simulate Incoming Call
+                    </ThemedText>
+                  </View>
+                  <View
+                    style={{
+                      paddingHorizontal: 8,
+                      paddingVertical: 3,
+                      borderRadius: 10,
+                      backgroundColor: theme.callGreen + '20',
+                    }}>
+                    <ThemedText style={{ color: theme.callGreen, fontSize: 11, fontWeight: '700' }}>
+                      Test Ring
+                    </ThemedText>
+                  </View>
+                </SpringPressable>
+
+                <View style={[styles.divider, { backgroundColor: theme.border }]} />
+
                 {/* Copy Number */}
                 <SpringPressable scaleTo={0.98} style={styles.menuRow}>
                   <View style={styles.menuRowLeft}>
@@ -600,3 +643,4 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
+

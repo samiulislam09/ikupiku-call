@@ -26,7 +26,14 @@ export type IconName =
   | 'block'
   | 'clock'
   | 'copy'
-  | 'back';
+  | 'back'
+  | 'mic-off'
+  | 'phone-down'
+  | 'pause'
+  | 'user-plus'
+  | 'waveform'
+  | 'video-off'
+  | 'volume-off';
 
 interface AppIconProps {
   name: IconName;
@@ -155,6 +162,41 @@ const ICON_MAP: Record<IconName, { ios: SFSymbol; android: AndroidSymbol; web: A
     ios: 'chevron.left',
     android: 'arrow_back',
     web: 'arrow_back',
+  },
+  'mic-off': {
+    ios: 'mic.slash.fill',
+    android: 'mic_off',
+    web: 'mic_off',
+  },
+  'phone-down': {
+    ios: 'phone.down.fill',
+    android: 'call_end',
+    web: 'call_end',
+  },
+  pause: {
+    ios: 'pause.fill',
+    android: 'pause',
+    web: 'pause',
+  },
+  'user-plus': {
+    ios: 'person.crop.circle.badge.plus',
+    android: 'person_add',
+    web: 'person_add',
+  },
+  waveform: {
+    ios: 'waveform',
+    android: 'graphic_eq',
+    web: 'graphic_eq',
+  },
+  'video-off': {
+    ios: 'video.slash.fill',
+    android: 'videocam_off',
+    web: 'videocam_off',
+  },
+  'volume-off': {
+    ios: 'speaker.slash.fill',
+    android: 'volume_off',
+    web: 'volume_off',
   },
 };
 

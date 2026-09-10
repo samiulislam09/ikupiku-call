@@ -15,12 +15,14 @@ import { ThemedView } from '@/components/themed-view';
 import { AppIcon } from '@/components/ui/app-icon';
 import { SpringPressable } from '@/components/ui/spring-pressable';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
+import { useCall } from '@/context/call-context';
 import { ThemeMode, useThemeContext } from '@/context/theme-context';
 import { useTheme } from '@/hooks/use-theme';
 
 export default function ProfileScreen() {
   const theme = useTheme();
-  const { isDark, themeMode, toggleTheme, setThemeMode } = useThemeContext();
+  const { isDark, themeMode, setThemeMode } = useThemeContext();
+  const { receiveIncomingCall } = useCall();
 
   // Mock toggle states for design preview
   const [hdVoice, setHdVoice] = useState(true);
@@ -123,9 +125,9 @@ export default function ProfileScreen() {
                 styles.groupCard,
                 { backgroundColor: theme.card, borderColor: theme.border },
               ]}>
-              {/* Dark Theme Quick Switch */}
-              <View style={styles.rowItem}>
-                <View style={styles.rowLeft}>
+              {/* Theme Preference Segmented Control */}
+              <View style={styles.themeSelectorContainer}>
+                <View style={styles.themeHeaderRow}>
                   <View
                     style={[
                       styles.iconBox,
@@ -143,32 +145,19 @@ export default function ProfileScreen() {
                   </View>
                   <View style={styles.rowTexts}>
                     <ThemedText type="default" style={styles.rowTitle}>
-                      Dark Theme
+                      Theme Preference
                     </ThemedText>
                     <ThemedText type="small" themeColor="textSecondary">
-                      {isDark ? 'Dark theme active' : 'Light theme active'}
+                      {themeMode === 'system'
+                        ? `System default (${isDark ? 'Dark' : 'Light'})`
+                        : themeMode === 'dark'
+                        ? 'Dark mode active'
+                        : 'Light mode active'}
                     </ThemedText>
                   </View>
                 </View>
-                <Switch
-                  value={isDark}
-                  onValueChange={toggleTheme}
-                  trackColor={{ false: theme.border, true: theme.primary }}
-                  thumbColor="#FFFFFF"
-                />
-              </View>
 
-              <View style={[styles.divider, { backgroundColor: theme.border }]} />
-
-              {/* Theme Mode Segmented Buttons */}
-              <View style={styles.themeSelectorContainer}>
-                <ThemedText
-                  type="small"
-                  themeColor="textSecondary"
-                  style={styles.themeSelectorLabel}>
-                  Theme Preference:
-                </ThemedText>
-
+                {/* Theme Mode Segmented Buttons */}
                 <View
                   style={[
                     styles.themePillsContainer,
@@ -190,7 +179,7 @@ export default function ProfileScreen() {
                         ]}>
                         <AppIcon
                           name={opt.icon}
-                          size={14}
+                          size={15}
                           color={
                             isSelected ? theme.primary : theme.textSecondary
                           }
@@ -229,6 +218,50 @@ export default function ProfileScreen() {
                 styles.groupCard,
                 { backgroundColor: theme.card, borderColor: theme.border },
               ]}>
+              {/* Simulate Incoming Call Quick Test */}
+              <SpringPressable
+                scaleTo={0.97}
+                onPress={() =>
+                  receiveIncomingCall({
+                    name: 'David Miller',
+                    number: '+1 (555) 762-1104',
+                    label: 'Work',
+                    avatarColor: '#3B82F6',
+                  })
+                }
+                style={styles.rowItem}>
+                <View style={styles.rowLeft}>
+                  <View
+                    style={[
+                      styles.iconBox,
+                      { backgroundColor: theme.callGreen + '20' },
+                    ]}>
+                    <AppIcon name="phone-incoming" size={18} color={theme.callGreen} />
+                  </View>
+                  <View style={styles.rowTexts}>
+                    <ThemedText type="default" style={[styles.rowTitle, { color: theme.callGreen, fontWeight: '700' }]}>
+                      Simulate Incoming Call
+                    </ThemedText>
+                    <ThemedText type="small" themeColor="textSecondary">
+                      Test radar ringing & accept/decline screen
+                    </ThemedText>
+                  </View>
+                </View>
+                <View
+                  style={{
+                    paddingHorizontal: 10,
+                    paddingVertical: 4,
+                    borderRadius: 12,
+                    backgroundColor: theme.callGreen,
+                  }}>
+                  <ThemedText style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '700' }}>
+                    Test Call
+                  </ThemedText>
+                </View>
+              </SpringPressable>
+
+              <View style={[styles.divider, { backgroundColor: theme.border }]} />
+
               {/* HD Voice */}
               <View style={styles.rowItem}>
                 <View style={styles.rowLeft}>
@@ -649,11 +682,12 @@ const styles = StyleSheet.create({
   },
   themeSelectorContainer: {
     padding: Spacing.three,
-    gap: Spacing.two,
+    gap: Spacing.three,
   },
-  themeSelectorLabel: {
-    fontSize: 13,
-    fontWeight: '500',
+  themeHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.three,
   },
   themePillsContainer: {
     flexDirection: 'row',

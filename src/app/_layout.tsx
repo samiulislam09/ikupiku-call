@@ -3,7 +3,9 @@ import * as SplashScreen from 'expo-splash-screen';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import AppTabs from '@/components/app-tabs';
+import { CallingModal } from '@/components/call/calling-modal';
 import { KeypadModal } from '@/components/keypad/keypad-modal';
+import { CallProvider } from '@/context/call-context';
 import { KeypadProvider } from '@/context/keypad-context';
 import { ThemeProviderCustom, useThemeContext } from '@/context/theme-context';
 
@@ -14,11 +16,14 @@ function RootLayoutContent() {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <KeypadProvider>
-        <AnimatedSplashOverlay />
-        <AppTabs />
-        <KeypadModal />
-      </KeypadProvider>
+      <CallProvider>
+        <KeypadProvider>
+          <AnimatedSplashOverlay />
+          <AppTabs />
+          <KeypadModal />
+          <CallingModal />
+        </KeypadProvider>
+      </CallProvider>
     </ThemeProvider>
   );
 }

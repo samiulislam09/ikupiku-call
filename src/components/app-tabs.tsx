@@ -1,22 +1,29 @@
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
-import { useColorScheme } from 'react-native';
 
 import { Colors } from '@/constants/theme';
+import { useThemeContext } from '@/context/theme-context';
 
 export default function AppTabs() {
-  const scheme = useColorScheme();
-  const colors = Colors[scheme === 'unspecified' ? 'light' : scheme];
+  const { isDark } = useThemeContext();
+  const colors = Colors[isDark ? 'dark' : 'light'];
 
   return (
     <NativeTabs
       backgroundColor={colors.card}
-      indicatorColor={colors.backgroundElement}
+      indicatorColor={isDark ? '#6366F124' : '#4F46E518'}
       disableTransparentOnScrollEdge={true}
-      shadowColor={colors.border}
-      labelStyle={{ selected: { color: colors.primary } }}>
+      shadowColor={isDark ? 'rgba(0, 0, 0, 0.5)' : 'rgba(0, 0, 0, 0.08)'}
+      blurEffect={isDark ? 'systemMaterialDark' : 'systemMaterialLight'}
+      iconColor={colors.textSecondary}
+      tintColor={colors.primary}
+      labelStyle={{
+        selected: { color: colors.primary, fontWeight: '700' },
+        default: { color: colors.textSecondary, fontWeight: '500' },
+      }}>
       <NativeTabs.Trigger name="index">
         <NativeTabs.Trigger.Label>Call Logs</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="phone.fill" md="call" />
+        <NativeTabs.Trigger.Badge>2</NativeTabs.Trigger.Badge>
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="contacts">

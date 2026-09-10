@@ -60,7 +60,7 @@ export function FloatingKeypadButton() {
   }
 
   const bottomPosition =
-    Platform.OS === 'web' ? 76 : Math.max(insets.bottom, 16) + 68;
+    Platform.OS === 'web' ? 58 : Math.max(insets.bottom, 10) + 46;
 
   return (
     <View

@@ -16,6 +16,7 @@ import { ThemedView } from '@/components/themed-view';
 import { AppIcon } from '@/components/ui/app-icon';
 import { SpringPressable } from '@/components/ui/spring-pressable';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
+import { useCall } from '@/context/call-context';
 import { useTheme } from '@/hooks/use-theme';
 
 interface Contact {
@@ -128,6 +129,7 @@ const MOCK_CONTACTS: Contact[] = [
 
 export default function ContactsScreen() {
   const theme = useTheme();
+  const { startCall } = useCall();
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
 
@@ -283,6 +285,14 @@ export default function ContactsScreen() {
                       <SpringPressable
                         key={fav.id}
                         scaleTo={0.92}
+                        onPress={() => {
+                          startCall({
+                            name: fav.name,
+                            number: fav.phone,
+                            label: fav.label,
+                            avatarColor: fav.avatarColor,
+                          });
+                        }}
                         style={styles.favCard}>
                         <View
                           style={[
@@ -393,7 +403,14 @@ export default function ContactsScreen() {
                   <View style={styles.actionRow}>
                     <SpringPressable
                       scaleTo={0.9}
-                      onPress={() => {}}
+                      onPress={() => {
+                        startCall({
+                          name: item.name,
+                          number: item.phone,
+                          label: item.label,
+                          avatarColor: item.avatarColor,
+                        });
+                      }}
                       style={[
                         styles.actionButton,
                         {

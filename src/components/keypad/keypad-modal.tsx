@@ -17,6 +17,7 @@ import { ThemedView } from '@/components/themed-view';
 import { AppIcon } from '@/components/ui/app-icon';
 import { SpringPressable } from '@/components/ui/spring-pressable';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
+import { useCall } from '@/context/call-context';
 import { useKeypad } from '@/context/keypad-context';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -96,6 +97,17 @@ export function KeypadModal() {
     clearNumber,
   } = useKeypad();
   const theme = useTheme();
+  const { startCall } = useCall();
+
+  const handlePlaceCall = () => {
+    closeKeypad();
+    startCall({
+      name: dialedNumber || 'Unknown Caller',
+      number: dialedNumber || '+1 (555) 000-0000',
+      label: 'Mobile',
+      avatarColor: theme.primary,
+    });
+  };
 
   // Format dialed number with spaces
   const formattedNumber = useMemo(() => {
@@ -189,6 +201,7 @@ export function KeypadModal() {
                 entering={FadeInDown.duration(200)}
                 style={styles.quickChipsRow}>
                 <SpringPressable
+                  onPress={handlePlaceCall}
                   style={[
                     styles.chip,
                     { backgroundColor: theme.backgroundElement, borderColor: theme.border },
@@ -247,7 +260,7 @@ export function KeypadModal() {
             {/* Center: Glowing Green Call Button */}
             <SpringPressable
               scaleTo={0.92}
-              onPress={() => {}}
+              onPress={handlePlaceCall}
               style={[
                 styles.callButton,
                 { backgroundColor: theme.callGreen },

@@ -9,13 +9,14 @@ import {
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { FloatingKeypadButton } from '@/components/keypad/floating-keypad-button';
 import { CallDetailsModal, type CallRecord } from '@/components/call-details/call-details-modal';
+import { FloatingKeypadButton } from '@/components/keypad/floating-keypad-button';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { AppIcon } from '@/components/ui/app-icon';
 import { SpringPressable } from '@/components/ui/spring-pressable';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
+import { useCall } from '@/context/call-context';
 import { useTheme } from '@/hooks/use-theme';
 
 const MOCK_CALLS: CallRecord[] = [
@@ -109,6 +110,7 @@ const MOCK_CALLS: CallRecord[] = [
 
 export default function CallLogsScreen() {
   const theme = useTheme();
+  const { startCall } = useCall();
   const [filter, setFilter] = useState<'all' | 'missed'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
@@ -344,7 +346,14 @@ export default function CallLogsScreen() {
                   {/* Call Action Button */}
                   <SpringPressable
                     scaleTo={0.9}
-                    onPress={() => {}}
+                    onPress={() => {
+                      startCall({
+                        name: item.name,
+                        number: item.number,
+                        label: item.label,
+                        avatarColor: item.avatarColor,
+                      });
+                    }}
                     style={[
                       styles.callActionButton,
                       {
