@@ -1,3 +1,4 @@
+import * as Linking from 'expo-linking';
 import React, {
     createContext,
     useCallback,
@@ -6,14 +7,16 @@ import React, {
     useRef,
     useState,
 } from 'react';
-import * as Linking from 'expo-linking';
-import * as Notifications from 'expo-notifications';
 
 import {
     ACTION_ANSWER,
     ACTION_DECLINE,
+    DEFAULT_ACTION_IDENTIFIER,
+    addNotificationResponseListener,
     dismissIncomingCallNotification,
+    getLastNotificationResponse,
     IncomingCallPayload,
+    isNotificationsSupported,
     scheduleIncomingCallNotification,
     setupIncomingCallNotifications,
 } from '@/services/incoming-call-service';
@@ -407,9 +410,9 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
 
   // Handle an answered or declined notification
   const handleIncomingCallNotificationResponse = useCallback(
-    (response: Notifications.NotificationResponse) => {
-      const actionId = response.actionIdentifier;
-      const data = response.notification.request.content.data as Partial<IncomingCallPayload> | undefined;
+    (response: any) => {
+      const actionId = response?.actionIdentifier;
+      const data = response?.notification?.request?.content?.data as Partial<IncomingCallPayload> | undefined;
 
       if (data && data.type === 'incoming_call') {
         const callerInfo: CallerInfo = {
@@ -421,7 +424,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
 
         if (
           actionId === ACTION_ANSWER ||
-          actionId === Notifications.DEFAULT_ACTION_IDENTIFIER
+          actionId === DEFAULT_ACTION_IDENTIFIER
         ) {
           // User picked up or tapped the notification to answer
           dismissIncomingCallNotification();
@@ -497,7 +500,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     setupIncomingCallNotifications();
 
     // 2. Check cold start notification response (app was closed/killed and user tapped Answer/notification)
-    Notifications.getLastNotificationResponseAsync().then((response) => {
+    getLastNotificationResponse().then((response) => {
       if (response) {
         handleIncomingCallNotificationResponse(response);
       }
@@ -511,11 +514,9 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     });
 
     // 4. Runtime listener for notification responses (app backgrounded or in foreground)
-    const notifSubscription = Notifications.addNotificationResponseReceivedListener(
-      (response) => {
-        handleIncomingCallNotificationResponse(response);
-      }
-    );
+    const cleanupNotifListener = addNotificationResponseListener((response) => {
+      handleIncomingCallNotificationResponse(response);
+    });
 
     // 5. Runtime listener for incoming deep links
     const linkSubscription = Linking.addEventListener('url', ({ url }) => {
@@ -523,7 +524,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     });
 
     return () => {
-      notifSubscription.remove();
+      cleanupNotifListener();
       linkSubscription.remove();
     };
   }, [handleIncomingCallNotificationResponse, handleDeepLinkUrl]);
@@ -531,15 +532,24 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   // Schedule a test incoming call with delay (to test closed/backgrounded app)
   const scheduleTestIncomingCall = useCallback(
     async (delaySeconds: number = 5, testCaller?: Partial<CallerInfo>) => {
-      const targetCaller = {
+      const targetCaller: CallerInfo = {
         name: testCaller?.name || DEFAULT_CALLER.name,
         number: testCaller?.number || DEFAULT_CALLER.number,
         label: testCaller?.label || DEFAULT_CALLER.label,
         avatarColor: testCaller?.avatarColor || DEFAULT_CALLER.avatarColor,
       };
-      return await scheduleIncomingCallNotification(targetCaller, delaySeconds);
+
+      if (isNotificationsSupported()) {
+        return await scheduleIncomingCallNotification(targetCaller, delaySeconds);
+      } else {
+        // In Expo Go on Android or web: simulate in-app incoming call after delay
+        setTimeout(() => {
+          receiveIncomingCall(targetCaller);
+        }, Math.max(1, delaySeconds) * 1000);
+        return 'in_app_simulated_' + Date.now();
+      }
     },
-    []
+    [receiveIncomingCall]
   );
 
   const toggleMute = useCallback(() => setIsMuted((v) => !v), []);

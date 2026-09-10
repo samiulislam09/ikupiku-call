@@ -1,10 +1,12 @@
 import { Platform } from 'react-native';
-import * as Notifications from 'expo-notifications';
+import { isRunningInExpoGo } from 'expo';
+import type * as Notifications from 'expo-notifications';
 
 export const INCOMING_CALL_CATEGORY = 'incoming_call';
 export const ACTION_ANSWER = 'ANSWER_ACTION';
 export const ACTION_DECLINE = 'DECLINE_ACTION';
 export const CALL_CHANNEL_ID = 'incoming_calls';
+export const DEFAULT_ACTION_IDENTIFIER = 'expo.modules.notifications.actions.DEFAULT';
 
 export interface IncomingCallPayload {
   type: 'incoming_call';
@@ -15,16 +17,42 @@ export interface IncomingCallPayload {
   avatarColor?: string;
 }
 
-// Configure how notifications appear when received in foreground
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-    priority: Notifications.AndroidNotificationPriority.MAX,
-  }),
-});
+/**
+ * Returns whether native background / lockscreen notifications via expo-notifications
+ * are supported in the current runtime environment.
+ *
+ * Notice: Expo Go on Android removed remote/push notifications in SDK 53+.
+ * Standalone builds and Development Builds (npx expo run:android / eas build)
+ * fully support native notifications.
+ */
+export function isNotificationsSupported(): boolean {
+  if (Platform.OS === 'web') return false;
+  if (isRunningInExpoGo() && Platform.OS === 'android') {
+    return false;
+  }
+  return true;
+}
+
+let cachedNotifications: typeof Notifications | null = null;
+let didAttemptLoad = false;
+
+function getNotificationsModule(): typeof Notifications | null {
+  if (!isNotificationsSupported()) {
+    return null;
+  }
+  if (didAttemptLoad) {
+    return cachedNotifications;
+  }
+  didAttemptLoad = true;
+  try {
+    // Dynamic require avoids loading sideEffects in Expo Go on Android
+    cachedNotifications = require('expo-notifications');
+    return cachedNotifications;
+  } catch (err) {
+    console.warn('[IncomingCallService] Could not load expo-notifications:', err);
+    return null;
+  }
+}
 
 let isInitialized = false;
 
@@ -33,8 +61,9 @@ let isInitialized = false;
  * and check/request necessary permissions.
  */
 export async function setupIncomingCallNotifications(): Promise<boolean> {
-  if (Platform.OS === 'web') {
-    return true;
+  const NotificationsModule = getNotificationsModule();
+  if (!NotificationsModule) {
+    return false;
   }
 
   if (isInitialized) {
@@ -42,11 +71,22 @@ export async function setupIncomingCallNotifications(): Promise<boolean> {
   }
 
   try {
+    // Configure foreground notification presentation behavior
+    NotificationsModule.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowBanner: true,
+        shouldShowList: true,
+        shouldPlaySound: true,
+        shouldSetBadge: false,
+        priority: NotificationsModule.AndroidNotificationPriority.MAX,
+      }),
+    });
+
     // 1. Request permissions
-    const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    const { status: existingStatus } = await NotificationsModule.getPermissionsAsync();
     let finalStatus = existingStatus;
     if (existingStatus !== 'granted') {
-      const { status } = await Notifications.requestPermissionsAsync({
+      const { status } = await NotificationsModule.requestPermissionsAsync({
         ios: {
           allowAlert: true,
           allowBadge: true,
@@ -59,17 +99,17 @@ export async function setupIncomingCallNotifications(): Promise<boolean> {
 
     // 2. Set up Android Notification Channel with maximum importance
     if (Platform.OS === 'android') {
-      await Notifications.setNotificationChannelAsync(CALL_CHANNEL_ID, {
+      await NotificationsModule.setNotificationChannelAsync(CALL_CHANNEL_ID, {
         name: 'Incoming Phone Calls',
-        importance: Notifications.AndroidImportance.MAX,
+        importance: NotificationsModule.AndroidImportance.MAX,
         vibrationPattern: [0, 600, 400, 600, 400, 600],
         sound: 'default',
         enableVibrate: true,
         bypassDnd: true,
-        lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+        lockscreenVisibility: NotificationsModule.AndroidNotificationVisibility.PUBLIC,
         audioAttributes: {
-          usage: Notifications.AndroidAudioUsage.NOTIFICATION_RINGTONE,
-          contentType: Notifications.AndroidAudioContentType.SONIFICATION,
+          usage: NotificationsModule.AndroidAudioUsage.NOTIFICATION_RINGTONE,
+          contentType: NotificationsModule.AndroidAudioContentType.SONIFICATION,
           flags: {
             enforceAudibility: true,
             requestHardwareAudioVideoSynchronization: false,
@@ -79,7 +119,7 @@ export async function setupIncomingCallNotifications(): Promise<boolean> {
     }
 
     // 3. Register Notification Category with "Answer" & "Decline" interactive actions
-    await Notifications.setNotificationCategoryAsync(INCOMING_CALL_CATEGORY, [
+    await NotificationsModule.setNotificationCategoryAsync(INCOMING_CALL_CATEGORY, [
       {
         identifier: ACTION_ANSWER,
         buttonTitle: 'Answer',
@@ -121,6 +161,11 @@ export async function scheduleIncomingCallNotification(
   },
   delaySeconds: number = 5
 ): Promise<string> {
+  const NotificationsModule = getNotificationsModule();
+  if (!NotificationsModule) {
+    return 'fallback_' + Date.now();
+  }
+
   await setupIncomingCallNotifications();
 
   const callId = 'call_' + Date.now();
@@ -133,7 +178,7 @@ export async function scheduleIncomingCallNotification(
     avatarColor: caller.avatarColor || '#208AEF',
   };
 
-  const notificationId = await Notifications.scheduleNotificationAsync({
+  const notificationId = await NotificationsModule.scheduleNotificationAsync({
     content: {
       title: `Incoming Call`,
       subtitle: caller.name,
@@ -141,14 +186,14 @@ export async function scheduleIncomingCallNotification(
       data: payload as unknown as Record<string, unknown>,
       categoryIdentifier: INCOMING_CALL_CATEGORY,
       sound: 'default',
-      priority: Notifications.AndroidNotificationPriority.MAX,
+      priority: NotificationsModule.AndroidNotificationPriority.MAX,
       vibrate: [0, 600, 400, 600],
       autoDismiss: false,
       sticky: true,
       ...(Platform.OS === 'android' ? { channelId: CALL_CHANNEL_ID } : {}),
     },
     trigger: {
-      type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+      type: NotificationsModule.SchedulableTriggerInputTypes.TIME_INTERVAL,
       seconds: Math.max(1, delaySeconds),
       repeats: false,
     },
@@ -161,13 +206,52 @@ export async function scheduleIncomingCallNotification(
  * Dismiss a specific notification or all active call notifications.
  */
 export async function dismissIncomingCallNotification(notificationId?: string): Promise<void> {
+  const NotificationsModule = getNotificationsModule();
+  if (!NotificationsModule) return;
+
   try {
     if (notificationId) {
-      await Notifications.dismissNotificationAsync(notificationId);
+      await NotificationsModule.dismissNotificationAsync(notificationId);
     } else {
-      await Notifications.dismissAllNotificationsAsync();
+      await NotificationsModule.dismissAllNotificationsAsync();
     }
   } catch (err) {
     console.warn('[IncomingCallService] dismiss failed:', err);
+  }
+}
+
+/**
+ * Retrieves the cold-start notification response if the app was launched by tapping a notification.
+ */
+export async function getLastNotificationResponse(): Promise<Notifications.NotificationResponse | null> {
+  const NotificationsModule = getNotificationsModule();
+  if (!NotificationsModule) return null;
+
+  try {
+    return await NotificationsModule.getLastNotificationResponseAsync();
+  } catch (err) {
+    console.warn('[IncomingCallService] getLastNotificationResponse error:', err);
+    return null;
+  }
+}
+
+/**
+ * Subscribes to notification response interactions while the app is alive.
+ * Returns an unsubscribe cleanup function.
+ */
+export function addNotificationResponseListener(
+  callback: (response: Notifications.NotificationResponse) => void
+): () => void {
+  const NotificationsModule = getNotificationsModule();
+  if (!NotificationsModule) {
+    return () => {};
+  }
+
+  try {
+    const subscription = NotificationsModule.addNotificationResponseReceivedListener(callback);
+    return () => subscription.remove();
+  } catch (err) {
+    console.warn('[IncomingCallService] addNotificationResponseListener error:', err);
+    return () => {};
   }
 }

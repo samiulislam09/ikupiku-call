@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import {
-  Modal,
-  Platform,
-  StyleSheet,
-  View,
+    Modal,
+    Platform,
+    StyleSheet,
+    View,
 } from 'react-native';
 import Animated, { FadeInDown, FadeOutDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -14,6 +14,7 @@ import { SpringPressable } from '@/components/ui/spring-pressable';
 import { Spacing } from '@/constants/theme';
 import { useCall } from '@/context/call-context';
 import { useThemeContext } from '@/context/theme-context';
+import { isNotificationsSupported } from '@/services/incoming-call-service';
 
 interface SimulateCallModalProps {
   visible: boolean;
@@ -82,11 +83,22 @@ export function SimulateCallModal({ visible, onClose }: SimulateCallModalProps) 
                 <AppIcon name="phone" size={24} color={theme.primary} />
               </View>
               <ThemedText type="subtitle" style={[styles.title, { color: theme.text }]}>
-                Test Closed-App Call
+                Test Incoming Call
               </ThemedText>
               <ThemedText style={[styles.subtitle, { color: theme.textSecondary }]}>
-                Test receiving & answering an incoming call when the app is minimized or killed.
+                {isNotificationsSupported()
+                  ? 'Test receiving & answering an incoming call when the app is minimized or killed.'
+                  : 'Simulate the realistic incoming call interface, audio equalizer, and pickup actions.'}
               </ThemedText>
+
+              {!isNotificationsSupported() && (
+                <View style={[styles.environmentBadge, { backgroundColor: theme.card, borderColor: theme.border }]}>
+                  <AppIcon name="info" size={14} color={theme.primary} />
+                  <ThemedText style={[styles.environmentText, { color: theme.textSecondary }]}>
+                    Expo Go Mode: Lock-screen push on Android requires a Development Build (SDK 53+). Incoming call will ring in-app!
+                  </ThemedText>
+                </View>
+              )}
             </View>
 
             {/* Countdown Active State */}
@@ -96,10 +108,14 @@ export function SimulateCallModal({ visible, onClose }: SimulateCallModalProps) 
                   {countdown}s
                 </ThemedText>
                 <ThemedText style={[styles.countdownHint, { color: theme.text }]}>
-                  Lock your screen or close the app NOW!
+                  {isNotificationsSupported()
+                    ? 'Lock your screen or close the app NOW!'
+                    : 'Get ready for the incoming call!'}
                 </ThemedText>
                 <ThemedText style={[styles.countdownSubhint, { color: theme.textSecondary }]}>
-                  When the notification rings, tap "Answer" to verify the app wakes up and connects.
+                  {isNotificationsSupported()
+                    ? 'When the notification rings, tap "Answer" to verify the app wakes up and connects.'
+                    : 'Incoming call screen with radar animation and caller Sarah Jenkins will appear.'}
                 </ThemedText>
 
                 <SpringPressable
@@ -127,7 +143,9 @@ export function SimulateCallModal({ visible, onClose }: SimulateCallModalProps) 
                       <ThemedText style={styles.stepNum}>2</ThemedText>
                     </View>
                     <ThemedText style={[styles.stepText, { color: theme.text }]}>
-                      Immediately press the phone's Home button or lock the screen.
+                      {isNotificationsSupported()
+                        ? "Immediately press the phone's Home button or lock the screen."
+                        : "Wait 5 seconds for the incoming call trigger to fire."}
                     </ThemedText>
                   </View>
 
@@ -136,7 +154,9 @@ export function SimulateCallModal({ visible, onClose }: SimulateCallModalProps) 
                       <ThemedText style={styles.stepNum}>3</ThemedText>
                     </View>
                     <ThemedText style={[styles.stepText, { color: theme.text }]}>
-                      Phone will ring with "Answer" & "Decline" actions.
+                      {isNotificationsSupported()
+                        ? 'Phone will ring with "Answer" & "Decline" actions.'
+                        : 'Full-screen incoming call UI will appear with pulsating radar rings.'}
                     </ThemedText>
                   </View>
 
@@ -145,7 +165,7 @@ export function SimulateCallModal({ visible, onClose }: SimulateCallModalProps) 
                       <ThemedText style={styles.stepNum}>4</ThemedText>
                     </View>
                     <ThemedText style={[styles.stepText, { color: theme.text }]}>
-                      Tap <ThemedText type="smallBold" style={{ color: theme.callGreen }}>Answer</ThemedText> to launch straight into active in-call mode!
+                      Tap <ThemedText type="smallBold" style={{ color: theme.callGreen }}>Accept / Answer</ThemedText> to enter active in-call mode!
                     </ThemedText>
                   </View>
                 </View>
@@ -234,6 +254,21 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 18,
     paddingHorizontal: Spacing.two,
+  },
+  environmentBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginTop: Spacing.two,
+  },
+  environmentText: {
+    fontSize: 12,
+    lineHeight: 16,
+    flex: 1,
   },
   content: {
     width: '100%',
@@ -331,3 +366,4 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
+
