@@ -2,17 +2,18 @@ import { useState } from 'react';
 import {
   FlatList,
   Platform,
-  Pressable,
   StyleSheet,
   TextInput,
   View,
 } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FloatingKeypadButton } from '@/components/keypad/floating-keypad-button';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { AppIcon } from '@/components/ui/app-icon';
+import { SpringPressable } from '@/components/ui/spring-pressable';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -37,7 +38,7 @@ const MOCK_CALLS: CallRecord[] = [
     time: '11:45 AM',
     section: 'Today',
     label: 'Mobile',
-    avatarColor: '#EF4444',
+    avatarColor: '#F43F5E',
   },
   {
     id: '2',
@@ -80,7 +81,7 @@ const MOCK_CALLS: CallRecord[] = [
     time: 'Yesterday',
     section: 'Yesterday',
     label: 'Mobile',
-    avatarColor: '#EF4444',
+    avatarColor: '#F43F5E',
   },
   {
     id: '6',
@@ -121,6 +122,7 @@ export default function CallLogsScreen() {
   const theme = useTheme();
   const [filter, setFilter] = useState<'all' | 'missed'>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
 
   const filteredCalls = MOCK_CALLS.filter((call) => {
     if (filter === 'missed' && call.type !== 'missed') {
@@ -149,9 +151,26 @@ export default function CallLogsScreen() {
       <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeArea}>
         {/* Screen Header */}
         <View style={styles.header}>
-          <ThemedText type="title" style={styles.title}>
-            Call Logs
-          </ThemedText>
+          <View style={styles.titleRow}>
+            <ThemedText type="title" style={styles.title}>
+              Call Logs
+            </ThemedText>
+            <View
+              style={[
+                styles.callCountPill,
+                { backgroundColor: theme.backgroundElement },
+              ]}>
+              <View
+                style={[
+                  styles.liveIndicator,
+                  { backgroundColor: theme.callGreen },
+                ]}
+              />
+              <ThemedText type="smallBold" themeColor="textSecondary">
+                {filteredCalls.length} calls
+              </ThemedText>
+            </View>
+          </View>
 
           {/* Segmented Filter: All vs Missed */}
           <View
@@ -159,7 +178,8 @@ export default function CallLogsScreen() {
               styles.segmentContainer,
               { backgroundColor: theme.backgroundElement },
             ]}>
-            <Pressable
+            <SpringPressable
+              scaleTo={0.96}
               onPress={() => setFilter('all')}
               style={[
                 styles.segmentButton,
@@ -172,12 +192,14 @@ export default function CallLogsScreen() {
                 type="smallBold"
                 style={{
                   color: filter === 'all' ? theme.text : theme.textSecondary,
+                  fontWeight: filter === 'all' ? '700' : '500',
                 }}>
                 All Calls
               </ThemedText>
-            </Pressable>
+            </SpringPressable>
 
-            <Pressable
+            <SpringPressable
+              scaleTo={0.96}
               onPress={() => setFilter('missed')}
               style={[
                 styles.segmentButton,
@@ -190,35 +212,45 @@ export default function CallLogsScreen() {
                 type="smallBold"
                 style={{
                   color: filter === 'missed' ? theme.callRed : theme.textSecondary,
+                  fontWeight: filter === 'missed' ? '700' : '500',
                 }}>
                 Missed
               </ThemedText>
-            </Pressable>
+            </SpringPressable>
           </View>
 
           {/* Search Bar */}
           <View
             style={[
               styles.searchBar,
-              { backgroundColor: theme.backgroundElement, borderColor: theme.border },
+              {
+                backgroundColor: theme.backgroundElement,
+                borderColor: isSearchFocused ? theme.primary : theme.border,
+              },
             ]}>
-            <AppIcon name="search" size={18} color={theme.textSecondary} />
+            <AppIcon
+              name="search"
+              size={18}
+              color={isSearchFocused ? theme.primary : theme.textSecondary}
+            />
             <TextInput
               value={searchQuery}
               onChangeText={setSearchQuery}
-              placeholder="Search call logs..."
+              onFocus={() => setIsSearchFocused(true)}
+              onBlur={() => setIsSearchFocused(false)}
+              placeholder="Search call logs & numbers..."
               placeholderTextColor={theme.textSecondary}
               style={[styles.searchInput, { color: theme.text }]}
             />
             {searchQuery.length > 0 && (
-              <Pressable onPress={() => setSearchQuery('')} hitSlop={8}>
+              <SpringPressable onPress={() => setSearchQuery('')} hitSlop={8}>
                 <AppIcon name="close" size={16} color={theme.textSecondary} />
-              </Pressable>
+              </SpringPressable>
             )}
           </View>
         </View>
 
-        {/* Call Logs List */}
+        {/* Call Logs List with Staggered Entrance Animations */}
         <FlatList
           data={filteredCalls}
           keyExtractor={(item) => item.id}
@@ -236,7 +268,7 @@ export default function CallLogsScreen() {
                 ? 'phone-incoming'
                 : 'phone-outgoing';
 
-            const iconColor =
+            const statusColor =
               item.type === 'missed'
                 ? theme.callRed
                 : item.type === 'incoming'
@@ -244,40 +276,62 @@ export default function CallLogsScreen() {
                 : theme.primary;
 
             return (
-              <View>
+              <Animated.View
+                entering={FadeInDown.delay(index * 35).springify()}>
                 {showSection && (
-                  <ThemedText
-                    type="smallBold"
-                    style={styles.sectionHeader}
-                    themeColor="textSecondary">
-                    {item.section}
-                  </ThemedText>
+                  <View style={styles.sectionHeaderRow}>
+                    <ThemedText
+                      type="smallBold"
+                      style={styles.sectionHeader}
+                      themeColor="textSecondary">
+                      {item.section}
+                    </ThemedText>
+                    <View
+                      style={[
+                        styles.sectionLine,
+                        { backgroundColor: theme.border },
+                      ]}
+                    />
+                  </View>
                 )}
 
-                <Pressable
-                  style={({ pressed }) => [
+                <SpringPressable
+                  scaleTo={0.98}
+                  style={[
                     styles.callRow,
                     {
-                      backgroundColor: pressed
-                        ? theme.backgroundSelected
-                        : theme.card,
+                      backgroundColor: theme.card,
                       borderColor: theme.border,
                     },
                   ]}>
-                  {/* Contact Avatar */}
-                  <View
-                    style={[
-                      styles.avatar,
-                      { backgroundColor: item.avatarColor + '20' },
-                    ]}>
-                    <ThemedText
-                      type="smallBold"
-                      style={{ color: item.avatarColor }}>
-                      {getInitials(item.name)}
-                    </ThemedText>
+                  {/* Avatar with Status Badge */}
+                  <View style={styles.avatarWrapper}>
+                    <View
+                      style={[
+                        styles.avatar,
+                        {
+                          backgroundColor: item.avatarColor + '20',
+                          borderColor: item.avatarColor + '40',
+                        },
+                      ]}>
+                      <ThemedText
+                        type="smallBold"
+                        style={[styles.avatarText, { color: item.avatarColor }]}>
+                        {getInitials(item.name)}
+                      </ThemedText>
+                    </View>
+                    <View
+                      style={[
+                        styles.typeBadge,
+                        {
+                          backgroundColor: statusColor,
+                        },
+                      ]}>
+                      <AppIcon name={iconName} size={10} color="#FFFFFF" />
+                    </View>
                   </View>
 
-                  {/* Call Info */}
+                  {/* Call Details */}
                   <View style={styles.callDetails}>
                     <ThemedText
                       type="default"
@@ -289,40 +343,49 @@ export default function CallLogsScreen() {
                     </ThemedText>
 
                     <View style={styles.callSubInfo}>
-                      <AppIcon name={iconName} size={13} color={iconColor} />
                       <ThemedText type="small" themeColor="textSecondary">
                         {item.label} • {item.time}
-                        {item.duration ? ` (${item.duration})` : ''}
+                        {item.duration ? ` • ${item.duration}` : ''}
                       </ThemedText>
                     </View>
                   </View>
 
                   {/* Call Action Button */}
-                  <Pressable
-                    onPress={() => {
-                      // Call action placeholder
-                    }}
-                    style={({ pressed }) => [
+                  <SpringPressable
+                    scaleTo={0.9}
+                    onPress={() => {}}
+                    style={[
                       styles.callActionButton,
-                      { backgroundColor: theme.backgroundElement },
-                      pressed && styles.pressed,
+                      {
+                        backgroundColor: theme.callGreen + '16',
+                        borderColor: theme.callGreen + '30',
+                      },
                     ]}>
-                    <AppIcon name="phone" size={18} color={theme.callGreen} />
-                  </Pressable>
-                </Pressable>
-              </View>
+                    <AppIcon name="phone" size={17} color={theme.callGreen} />
+                  </SpringPressable>
+                </SpringPressable>
+              </Animated.View>
             );
           }}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <AppIcon name="phone" size={44} color={theme.textSecondary} />
+              <View
+                style={[
+                  styles.emptyIconCircle,
+                  { backgroundColor: theme.backgroundElement },
+                ]}>
+                <AppIcon name="phone" size={36} color={theme.textSecondary} />
+              </View>
               <ThemedText type="subtitle" style={styles.emptyTitle}>
                 No Call Logs
               </ThemedText>
-              <ThemedText type="small" themeColor="textSecondary" style={styles.emptySubtitle}>
+              <ThemedText
+                type="small"
+                themeColor="textSecondary"
+                style={styles.emptySubtitle}>
                 {filter === 'missed'
-                  ? 'You do not have any missed calls.'
-                  : 'Your call history will appear here once you make or receive calls.'}
+                  ? 'You have zero missed calls. You are completely caught up!'
+                  : 'Your calls will show up here as soon as you place or receive a call.'}
               </ThemedText>
             </View>
           }
@@ -351,36 +414,55 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.two,
     gap: Spacing.two,
   },
+  titleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
   title: {
     fontSize: 28,
-    fontWeight: '700',
+    fontWeight: '800',
     lineHeight: 34,
+    letterSpacing: -0.5,
+  },
+  callCountPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  liveIndicator: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
   },
   segmentContainer: {
     flexDirection: 'row',
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 3,
-    marginTop: Spacing.one,
+    marginTop: 2,
   },
   segmentButton: {
     flex: 1,
-    paddingVertical: Spacing.one + 2,
+    paddingVertical: 7,
     alignItems: 'center',
-    borderRadius: 9,
+    borderRadius: 11,
   },
   activeSegmentShadow: {
     ...Platform.select({
       ios: {
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.12,
+        shadowRadius: 4,
       },
       android: {
-        elevation: 1,
+        elevation: 2,
       },
       web: {
-        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
       },
     }),
   },
@@ -388,11 +470,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: Spacing.three,
-    height: 42,
-    borderRadius: 12,
-    borderWidth: 1,
+    height: 44,
+    borderRadius: 14,
+    borderWidth: 1.5,
     gap: Spacing.two,
-    marginTop: Spacing.one,
+    marginTop: 2,
   },
   searchInput: {
     flex: 1,
@@ -404,38 +486,84 @@ const styles = StyleSheet.create({
     paddingBottom: 84,
     paddingTop: Spacing.one,
   },
-  sectionHeader: {
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
     marginTop: Spacing.three,
     marginBottom: Spacing.two,
-    paddingHorizontal: Spacing.one,
+  },
+  sectionHeader: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1,
     textTransform: 'uppercase',
-    fontSize: 12,
-    letterSpacing: 0.8,
+  },
+  sectionLine: {
+    flex: 1,
+    height: 1,
+    opacity: 0.6,
   },
   callRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: Spacing.three,
-    borderRadius: 14,
-    marginBottom: Spacing.two,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 16,
+    marginBottom: 8,
     borderWidth: 1,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.04,
+        shadowRadius: 6,
+      },
+      android: {
+        elevation: 1,
+      },
+      web: {
+        boxShadow: '0 2px 6px rgba(0, 0, 0, 0.03)',
+      },
+    }),
+  },
+  avatarWrapper: {
+    position: 'relative',
+    marginRight: Spacing.three,
   },
   avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 46,
+    height: 46,
+    borderRadius: 23,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: Spacing.three,
+    borderWidth: 1.5,
+  },
+  avatarText: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  typeBadge: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
   },
   callDetails: {
     flex: 1,
     justifyContent: 'center',
-    gap: 2,
+    gap: 3,
   },
   callerName: {
-    fontWeight: '600',
+    fontWeight: '700',
     fontSize: 16,
+    letterSpacing: -0.2,
   },
   callSubInfo: {
     flexDirection: 'row',
@@ -443,15 +571,13 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   callActionButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
     marginLeft: Spacing.two,
-  },
-  pressed: {
-    opacity: 0.7,
   },
   emptyContainer: {
     alignItems: 'center',
@@ -459,13 +585,22 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.six,
     gap: Spacing.two,
   },
+  emptyIconCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: Spacing.two,
+  },
   emptyTitle: {
     fontSize: 20,
-    marginTop: Spacing.two,
+    fontWeight: '700',
   },
   emptySubtitle: {
     textAlign: 'center',
-    maxWidth: 280,
+    maxWidth: 290,
     fontSize: 14,
+    lineHeight: 20,
   },
 });

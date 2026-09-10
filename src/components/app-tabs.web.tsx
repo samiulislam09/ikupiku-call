@@ -6,10 +6,12 @@ import {
     TabTrigger,
     TabTriggerSlotProps,
 } from 'expo-router/ui';
-import { Pressable, StyleSheet, useColorScheme, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { AppIcon, IconName } from '@/components/ui/app-icon';
-import { Colors, MaxContentWidth, Spacing } from '@/constants/theme';
+import { SpringPressable } from '@/components/ui/spring-pressable';
+import { MaxContentWidth, Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 import { ThemedText } from './themed-text';
 
 export default function AppTabs() {
@@ -39,24 +41,28 @@ export function TabButton({
   icon,
   ...props
 }: TabTriggerSlotProps & { icon?: IconName }) {
-  const scheme = useColorScheme();
-  const colors = Colors[scheme === 'unspecified' ? 'light' : scheme];
+  const theme = useTheme();
 
   return (
-    <Pressable
+    <SpringPressable
+      scaleTo={0.93}
       {...props}
-      style={({ pressed }) => [styles.tabPressable, pressed && styles.pressed]}>
+      style={styles.tabPressable}>
       <View style={styles.tabButtonView}>
         {icon && (
           <View
             style={[
               styles.iconBadge,
-              isFocused && { backgroundColor: colors.primary + '18' },
+              isFocused && {
+                backgroundColor: theme.primary + '20',
+                borderWidth: 1,
+                borderColor: theme.primary + '35',
+              },
             ]}>
             <AppIcon
               name={icon}
               size={22}
-              color={isFocused ? colors.primary : colors.textSecondary}
+              color={isFocused ? theme.primary : theme.textSecondary}
             />
           </View>
         )}
@@ -65,20 +71,19 @@ export function TabButton({
           style={[
             styles.tabLabel,
             {
-              color: isFocused ? colors.primary : colors.textSecondary,
+              color: isFocused ? theme.primary : theme.textSecondary,
               fontWeight: isFocused ? '700' : '500',
             },
           ]}>
           {children}
         </ThemedText>
       </View>
-    </Pressable>
+    </SpringPressable>
   );
 }
 
 export function CustomTabList(props: TabListProps) {
-  const scheme = useColorScheme();
-  const colors = Colors[scheme === 'unspecified' ? 'light' : scheme];
+  const theme = useTheme();
 
   return (
     <View
@@ -86,8 +91,8 @@ export function CustomTabList(props: TabListProps) {
       style={[
         styles.tabListContainer,
         {
-          backgroundColor: colors.card,
-          borderTopColor: colors.border,
+          backgroundColor: theme.card,
+          borderTopColor: theme.border,
         },
       ]}>
       <View style={styles.innerContainer}>{props.children}</View>
@@ -107,7 +112,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexDirection: 'row',
     zIndex: 100,
-    boxShadow: '0 -2px 10px rgba(0, 0, 0, 0.04)',
+    boxShadow: '0 -4px 16px rgba(0, 0, 0, 0.05)',
   },
   innerContainer: {
     width: '100%',
@@ -116,7 +121,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-around',
     height: 64,
-    paddingHorizontal: Spacing.two,
+    paddingHorizontal: Spacing.three,
   },
   tabPressable: {
     flex: 1,
@@ -131,17 +136,14 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   iconBadge: {
-    paddingHorizontal: Spacing.three,
-    paddingVertical: 3,
-    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 4,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
   tabLabel: {
     fontSize: 11,
     letterSpacing: 0.2,
-  },
-  pressed: {
-    opacity: 0.7,
   },
 });

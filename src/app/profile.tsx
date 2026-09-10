@@ -1,18 +1,19 @@
 import { useState } from 'react';
 import {
     Platform,
-    Pressable,
     ScrollView,
     StyleSheet,
     Switch,
     View,
 } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FloatingKeypadButton } from '@/components/keypad/floating-keypad-button';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { AppIcon } from '@/components/ui/app-icon';
+import { SpringPressable } from '@/components/ui/spring-pressable';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { ThemeMode, useThemeContext } from '@/context/theme-context';
 import { useTheme } from '@/hooks/use-theme';
@@ -46,26 +47,35 @@ export default function ProfileScreen() {
             </ThemedText>
           </View>
 
-          {/* User Profile Card */}
-          <View
+          {/* User Profile Card with Glowing Aura */}
+          <Animated.View
+            entering={FadeInDown.duration(300).springify()}
             style={[
               styles.profileCard,
               { backgroundColor: theme.card, borderColor: theme.border },
             ]}>
-            <View
-              style={[
-                styles.avatarLarge,
-                { backgroundColor: theme.primary },
-              ]}>
-              <ThemedText type="subtitle" style={styles.avatarText}>
-                AM
-              </ThemedText>
+            <View style={styles.avatarGlowContainer}>
               <View
                 style={[
-                  styles.onlineBadge,
-                  { backgroundColor: theme.callGreen },
+                  styles.avatarAura,
+                  { backgroundColor: theme.primary + '25' },
                 ]}
               />
+              <View
+                style={[
+                  styles.avatarLarge,
+                  { backgroundColor: theme.primary },
+                ]}>
+                <ThemedText type="subtitle" style={styles.avatarText}>
+                  AM
+                </ThemedText>
+                <View
+                  style={[
+                    styles.onlineBadge,
+                    { backgroundColor: theme.callGreen },
+                  ]}
+                />
+              </View>
             </View>
 
             <View style={styles.profileInfo}>
@@ -79,7 +89,10 @@ export default function ProfileScreen() {
               <View
                 style={[
                   styles.statusPill,
-                  { backgroundColor: theme.backgroundElement },
+                  {
+                    backgroundColor: theme.backgroundElement,
+                    borderColor: theme.border,
+                  },
                 ]}>
                 <View
                   style={[
@@ -88,14 +101,16 @@ export default function ProfileScreen() {
                   ]}
                 />
                 <ThemedText type="smallBold" themeColor="text">
-                  Available • HD Voice Ready
+                  Connected • HD Audio • 18ms
                 </ThemedText>
               </View>
             </View>
-          </View>
+          </Animated.View>
 
           {/* Section: Appearance & Theme */}
-          <View style={styles.section}>
+          <Animated.View
+            entering={FadeInDown.delay(70).springify()}
+            style={styles.section}>
             <ThemedText
               type="smallBold"
               style={styles.sectionTitle}
@@ -162,8 +177,9 @@ export default function ProfileScreen() {
                   {themeOptions.map((opt) => {
                     const isSelected = themeMode === opt.mode;
                     return (
-                      <Pressable
+                      <SpringPressable
                         key={opt.mode}
+                        scaleTo={0.94}
                         onPress={() => setThemeMode(opt.mode)}
                         style={[
                           styles.themePill,
@@ -189,16 +205,18 @@ export default function ProfileScreen() {
                           }}>
                           {opt.label}
                         </ThemedText>
-                      </Pressable>
+                      </SpringPressable>
                     );
                   })}
                 </View>
               </View>
             </View>
-          </View>
+          </Animated.View>
 
           {/* Section: Calling Preferences */}
-          <View style={styles.section}>
+          <Animated.View
+            entering={FadeInDown.delay(140).springify()}
+            style={styles.section}>
             <ThemedText
               type="smallBold"
               style={styles.sectionTitle}
@@ -270,8 +288,9 @@ export default function ProfileScreen() {
               <View style={[styles.divider, { backgroundColor: theme.border }]} />
 
               {/* Voicemail */}
-              <Pressable
-                style={({ pressed }) => [styles.rowItem, pressed && styles.pressed]}>
+              <SpringPressable
+                scaleTo={0.98}
+                style={styles.rowItem}>
                 <View style={styles.rowLeft}>
                   <View
                     style={[
@@ -292,12 +311,14 @@ export default function ProfileScreen() {
                 <ThemedText type="smallBold" style={{ color: theme.primary }}>
                   View
                 </ThemedText>
-              </Pressable>
+              </SpringPressable>
             </View>
-          </View>
+          </Animated.View>
 
-          {/* Section: Connectivity & Privacy */}
-          <View style={styles.section}>
+          {/* Section: Connectivity & Network */}
+          <Animated.View
+            entering={FadeInDown.delay(200).springify()}
+            style={styles.section}>
             <ThemedText
               type="smallBold"
               style={styles.sectionTitle}
@@ -369,8 +390,9 @@ export default function ProfileScreen() {
               <View style={[styles.divider, { backgroundColor: theme.border }]} />
 
               {/* Blocked Numbers */}
-              <Pressable
-                style={({ pressed }) => [styles.rowItem, pressed && styles.pressed]}>
+              <SpringPressable
+                scaleTo={0.98}
+                style={styles.rowItem}>
                 <View style={styles.rowLeft}>
                   <View
                     style={[
@@ -391,12 +413,14 @@ export default function ProfileScreen() {
                 <ThemedText type="small" themeColor="textSecondary">
                   Edit ›
                 </ThemedText>
-              </Pressable>
+              </SpringPressable>
             </View>
-          </View>
+          </Animated.View>
 
           {/* Section: Audio & Sound */}
-          <View style={styles.section}>
+          <Animated.View
+            entering={FadeInDown.delay(260).springify()}
+            style={styles.section}>
             <ThemedText
               type="smallBold"
               style={styles.sectionTitle}
@@ -409,8 +433,9 @@ export default function ProfileScreen() {
                 styles.groupCard,
                 { backgroundColor: theme.card, borderColor: theme.border },
               ]}>
-              <Pressable
-                style={({ pressed }) => [styles.rowItem, pressed && styles.pressed]}>
+              <SpringPressable
+                scaleTo={0.98}
+                style={styles.rowItem}>
                 <View style={styles.rowLeft}>
                   <View
                     style={[
@@ -431,9 +456,9 @@ export default function ProfileScreen() {
                 <ThemedText type="small" themeColor="textSecondary">
                   ›
                 </ThemedText>
-              </Pressable>
+              </SpringPressable>
             </View>
-          </View>
+          </Animated.View>
 
           {/* App Footer Info */}
           <View style={styles.footer}>
@@ -473,43 +498,57 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: '700',
+    fontWeight: '800',
     lineHeight: 34,
+    letterSpacing: -0.5,
   },
   profileCard: {
     alignItems: 'center',
     padding: Spacing.four,
-    borderRadius: 20,
+    borderRadius: 22,
     borderWidth: 1,
     marginBottom: Spacing.four,
     ...Platform.select({
       ios: {
         shadowColor: '#000000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.06,
-        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.08,
+        shadowRadius: 12,
       },
       android: {
-        elevation: 2,
+        elevation: 3,
       },
       web: {
-        boxShadow: '0 2px 10px rgba(0, 0, 0, 0.05)',
+        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.05)',
       },
     }),
   },
+  avatarGlowContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.two,
+    position: 'relative',
+  },
+  avatarAura: {
+    position: 'absolute',
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+  },
   avatarLarge: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 82,
+    height: 82,
+    borderRadius: 41,
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
-    marginBottom: Spacing.two,
+    borderWidth: 2.5,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   avatarText: {
     color: '#FFFFFF',
     fontSize: 28,
-    fontWeight: '700',
+    fontWeight: '800',
     lineHeight: 34,
   },
   onlineBadge: {
@@ -528,16 +567,18 @@ const styles = StyleSheet.create({
   },
   userName: {
     fontSize: 22,
-    fontWeight: '700',
+    fontWeight: '800',
+    letterSpacing: -0.3,
   },
   statusPill: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: Spacing.three,
-    paddingVertical: 5,
+    paddingVertical: 6,
     borderRadius: 20,
-    gap: 6,
+    gap: 7,
     marginTop: Spacing.two,
+    borderWidth: 1,
   },
   statusDot: {
     width: 8,
@@ -548,16 +589,31 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.four,
   },
   sectionTitle: {
-    fontSize: 12,
-    letterSpacing: 0.8,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1,
     textTransform: 'uppercase',
     marginBottom: Spacing.two,
     paddingHorizontal: Spacing.one,
   },
   groupCard: {
-    borderRadius: 16,
+    borderRadius: 18,
     borderWidth: 1,
     overflow: 'hidden',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.03,
+        shadowRadius: 6,
+      },
+      android: {
+        elevation: 1,
+      },
+      web: {
+        boxShadow: '0 2px 6px rgba(0, 0, 0, 0.02)',
+      },
+    }),
   },
   rowItem: {
     flexDirection: 'row',
@@ -573,9 +629,9 @@ const styles = StyleSheet.create({
     paddingRight: Spacing.two,
   },
   iconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+    width: 38,
+    height: 38,
+    borderRadius: 11,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -589,7 +645,7 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    marginLeft: 58,
+    marginLeft: 62,
   },
   themeSelectorContainer: {
     padding: Spacing.three,
@@ -597,10 +653,11 @@ const styles = StyleSheet.create({
   },
   themeSelectorLabel: {
     fontSize: 13,
+    fontWeight: '500',
   },
   themePillsContainer: {
     flexDirection: 'row',
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 3,
     gap: 4,
   },
@@ -610,22 +667,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    paddingVertical: Spacing.two - 1,
-    borderRadius: 9,
+    paddingVertical: 8,
+    borderRadius: 11,
   },
   activeSegmentShadow: {
     ...Platform.select({
       ios: {
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
+        shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.12,
-        shadowRadius: 2,
+        shadowRadius: 4,
       },
       android: {
-        elevation: 1,
+        elevation: 2,
       },
       web: {
-        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
       },
     }),
   },
@@ -636,12 +693,9 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 13,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   footerSubText: {
     fontSize: 12,
-  },
-  pressed: {
-    opacity: 0.7,
   },
 });

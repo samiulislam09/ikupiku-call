@@ -1,18 +1,20 @@
 import { useMemo, useState } from 'react';
 import {
     FlatList,
-    Pressable,
+    Platform,
     ScrollView,
     StyleSheet,
     TextInput,
-    View
+    View,
 } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FloatingKeypadButton } from '@/components/keypad/floating-keypad-button';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { AppIcon } from '@/components/ui/app-icon';
+import { SpringPressable } from '@/components/ui/spring-pressable';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -112,7 +114,7 @@ const MOCK_CONTACTS: Contact[] = [
     name: 'Sarah Jenkins',
     phone: '+1 (555) 234-8901',
     label: 'Mobile',
-    avatarColor: '#EF4444',
+    avatarColor: '#F43F5E',
     isFavorite: true,
   },
   {
@@ -127,6 +129,7 @@ const MOCK_CONTACTS: Contact[] = [
 export default function ContactsScreen() {
   const theme = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
 
   const filteredContacts = useMemo(() => {
     if (!searchQuery.trim()) return MOCK_CONTACTS;
@@ -163,8 +166,8 @@ export default function ContactsScreen() {
                 styles.badge,
                 { backgroundColor: theme.backgroundElement },
               ]}>
-              <ThemedText type="smallBold" themeColor="textSecondary">
-                {MOCK_CONTACTS.length}
+              <ThemedText type="smallBold" themeColor="primary">
+                {MOCK_CONTACTS.length} contacts
               </ThemedText>
             </View>
           </View>
@@ -173,25 +176,34 @@ export default function ContactsScreen() {
           <View
             style={[
               styles.searchBar,
-              { backgroundColor: theme.backgroundElement, borderColor: theme.border },
+              {
+                backgroundColor: theme.backgroundElement,
+                borderColor: isSearchFocused ? theme.primary : theme.border,
+              },
             ]}>
-            <AppIcon name="search" size={18} color={theme.textSecondary} />
+            <AppIcon
+              name="search"
+              size={18}
+              color={isSearchFocused ? theme.primary : theme.textSecondary}
+            />
             <TextInput
               value={searchQuery}
               onChangeText={setSearchQuery}
+              onFocus={() => setIsSearchFocused(true)}
+              onBlur={() => setIsSearchFocused(false)}
               placeholder="Search contacts by name or number..."
               placeholderTextColor={theme.textSecondary}
               style={[styles.searchInput, { color: theme.text }]}
             />
             {searchQuery.length > 0 && (
-              <Pressable onPress={() => setSearchQuery('')} hitSlop={8}>
+              <SpringPressable onPress={() => setSearchQuery('')} hitSlop={8}>
                 <AppIcon name="close" size={16} color={theme.textSecondary} />
-              </Pressable>
+              </SpringPressable>
             )}
           </View>
         </View>
 
-        {/* Contacts List */}
+        {/* Contacts List with Staggered Entrance Animations */}
         <FlatList
           data={filteredContacts}
           keyExtractor={(item) => item.id}
@@ -201,43 +213,65 @@ export default function ContactsScreen() {
             searchQuery.length === 0 ? (
               <View style={styles.headerExtras}>
                 {/* My Card Profile Row */}
-                <Pressable
-                  style={({ pressed }) => [
+                <SpringPressable
+                  scaleTo={0.98}
+                  style={[
                     styles.myCardRow,
                     {
                       backgroundColor: theme.card,
                       borderColor: theme.border,
                     },
-                    pressed && styles.pressed,
                   ]}>
                   <View
                     style={[
                       styles.myCardAvatar,
-                      { backgroundColor: theme.primary },
+                      {
+                        backgroundColor: theme.primary,
+                        borderColor: 'rgba(255, 255, 255, 0.25)',
+                      },
                     ]}>
-                    <ThemedText type="smallBold" style={{ color: '#FFFFFF' }}>
+                    <ThemedText type="smallBold" style={{ color: '#FFFFFF', fontSize: 16 }}>
                       ME
                     </ThemedText>
+                    <View
+                      style={[
+                        styles.myCardOnlineDot,
+                        { backgroundColor: theme.callGreen },
+                      ]}
+                    />
                   </View>
                   <View style={styles.myCardInfo}>
-                    <ThemedText type="default" style={styles.contactName}>
-                      Alex Morgan (You)
-                    </ThemedText>
+                    <View style={styles.nameBadgeRow}>
+                      <ThemedText type="default" style={styles.contactName}>
+                        Alex Morgan (You)
+                      </ThemedText>
+                      <View
+                        style={[
+                          styles.activeLinePill,
+                          { backgroundColor: theme.callGreen + '18' },
+                        ]}>
+                        <ThemedText
+                          type="smallBold"
+                          style={{ color: theme.callGreen, fontSize: 10 }}>
+                          VoIP LINE 1
+                        </ThemedText>
+                      </View>
+                    </View>
                     <ThemedText type="small" themeColor="textSecondary">
-                      My Card • +1 (555) 019-2831
+                      +1 (555) 019-2831 • HD Voice
                     </ThemedText>
                   </View>
-                </Pressable>
+                </SpringPressable>
 
-                {/* Favorites Horizontal Scroll */}
+                {/* Favorites Horizontal Scroll with Glow Rings */}
                 <View style={styles.favoritesSection}>
                   <View style={styles.favoritesHeader}>
-                    <AppIcon name="star" size={16} color="#F59E0B" />
+                    <AppIcon name="star" size={15} color="#F59E0B" />
                     <ThemedText
                       type="smallBold"
                       style={styles.sectionTitle}
                       themeColor="textSecondary">
-                      FAVORITES
+                      FAVORITE CONTACTS
                     </ThemedText>
                   </View>
 
@@ -246,47 +280,59 @@ export default function ContactsScreen() {
                     showsHorizontalScrollIndicator={false}
                     contentContainerStyle={styles.favoritesScrollContent}>
                     {favorites.map((fav) => (
-                      <Pressable
+                      <SpringPressable
                         key={fav.id}
-                        style={({ pressed }) => [
-                          styles.favCard,
-                          pressed && styles.pressed,
-                        ]}>
+                        scaleTo={0.92}
+                        style={styles.favCard}>
                         <View
                           style={[
-                            styles.favAvatar,
-                            { backgroundColor: fav.avatarColor + '25' },
+                            styles.favAvatarRing,
+                            { borderColor: fav.avatarColor + '60' },
                           ]}>
-                          <ThemedText
-                            type="smallBold"
-                            style={{ color: fav.avatarColor }}>
-                            {getInitials(fav.name)}
-                          </ThemedText>
                           <View
                             style={[
-                              styles.favCallBadge,
-                              { backgroundColor: theme.callGreen },
+                              styles.favAvatar,
+                              { backgroundColor: fav.avatarColor + '25' },
                             ]}>
-                            <AppIcon name="phone" size={9} color="#FFFFFF" />
+                            <ThemedText
+                              type="smallBold"
+                              style={{ color: fav.avatarColor, fontSize: 15 }}>
+                              {getInitials(fav.name)}
+                            </ThemedText>
+                            <View
+                              style={[
+                                styles.favCallBadge,
+                                { backgroundColor: theme.callGreen },
+                              ]}>
+                              <AppIcon name="phone" size={9} color="#FFFFFF" />
+                            </View>
                           </View>
                         </View>
                         <ThemedText
                           type="small"
                           numberOfLines={1}
-                          style={styles.favName}>
+                          style={[styles.favName, { color: theme.text }]}>
                           {fav.name.split(' ')[0]}
                         </ThemedText>
-                      </Pressable>
+                      </SpringPressable>
                     ))}
                   </ScrollView>
                 </View>
 
-                <ThemedText
-                  type="smallBold"
-                  style={styles.sectionTitle}
-                  themeColor="textSecondary">
-                  ALL CONTACTS
-                </ThemedText>
+                <View style={styles.allContactsHeaderRow}>
+                  <ThemedText
+                    type="smallBold"
+                    style={styles.sectionTitle}
+                    themeColor="textSecondary">
+                    ALL CONTACTS
+                  </ThemedText>
+                  <View
+                    style={[
+                      styles.sectionLine,
+                      { backgroundColor: theme.border },
+                    ]}
+                  />
+                </View>
               </View>
             ) : null
           }
@@ -297,7 +343,8 @@ export default function ContactsScreen() {
             const showLetter = firstLetter !== prevFirstLetter;
 
             return (
-              <View>
+              <Animated.View
+                entering={FadeInDown.delay(index * 25).springify()}>
                 {showLetter && (
                   <ThemedText
                     type="smallBold"
@@ -307,13 +354,12 @@ export default function ContactsScreen() {
                   </ThemedText>
                 )}
 
-                <Pressable
-                  style={({ pressed }) => [
+                <SpringPressable
+                  scaleTo={0.98}
+                  style={[
                     styles.contactRow,
                     {
-                      backgroundColor: pressed
-                        ? theme.backgroundSelected
-                        : theme.card,
+                      backgroundColor: theme.card,
                       borderColor: theme.border,
                     },
                   ]}>
@@ -321,11 +367,14 @@ export default function ContactsScreen() {
                   <View
                     style={[
                       styles.avatar,
-                      { backgroundColor: item.avatarColor + '20' },
+                      {
+                        backgroundColor: item.avatarColor + '20',
+                        borderColor: item.avatarColor + '40',
+                      },
                     ]}>
                     <ThemedText
                       type="smallBold"
-                      style={{ color: item.avatarColor }}>
+                      style={[styles.avatarText, { color: item.avatarColor }]}>
                       {getInitials(item.name)}
                     </ThemedText>
                   </View>
@@ -340,25 +389,34 @@ export default function ContactsScreen() {
                     </ThemedText>
                   </View>
 
-                  {/* Quick Call Action */}
-                  <Pressable
-                    onPress={() => {
-                      // Call action placeholder
-                    }}
-                    style={({ pressed }) => [
-                      styles.actionButton,
-                      { backgroundColor: theme.backgroundElement },
-                      pressed && styles.pressed,
-                    ]}>
-                    <AppIcon name="phone" size={17} color={theme.callGreen} />
-                  </Pressable>
-                </Pressable>
-              </View>
+                  {/* Action Buttons */}
+                  <View style={styles.actionRow}>
+                    <SpringPressable
+                      scaleTo={0.9}
+                      onPress={() => {}}
+                      style={[
+                        styles.actionButton,
+                        {
+                          backgroundColor: theme.callGreen + '16',
+                          borderColor: theme.callGreen + '30',
+                        },
+                      ]}>
+                      <AppIcon name="phone" size={16} color={theme.callGreen} />
+                    </SpringPressable>
+                  </View>
+                </SpringPressable>
+              </Animated.View>
             );
           }}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <AppIcon name="contacts" size={44} color={theme.textSecondary} />
+              <View
+                style={[
+                  styles.emptyIconCircle,
+                  { backgroundColor: theme.backgroundElement },
+                ]}>
+                <AppIcon name="contacts" size={36} color={theme.textSecondary} />
+              </View>
               <ThemedText type="subtitle" style={styles.emptyTitle}>
                 No Contacts Found
               </ThemedText>
@@ -366,7 +424,7 @@ export default function ContactsScreen() {
                 type="small"
                 themeColor="textSecondary"
                 style={styles.emptySubtitle}>
-                No contacts matched your search query.
+                No contacts match your query. Try searching another name or number.
               </ThemedText>
             </View>
           }
@@ -398,27 +456,28 @@ const styles = StyleSheet.create({
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.two,
+    justifyContent: 'space-between',
   },
   title: {
     fontSize: 28,
-    fontWeight: '700',
+    fontWeight: '800',
     lineHeight: 34,
+    letterSpacing: -0.5,
   },
   badge: {
-    paddingHorizontal: Spacing.two,
-    paddingVertical: 2,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
     borderRadius: 12,
   },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: Spacing.three,
-    height: 42,
-    borderRadius: 12,
-    borderWidth: 1,
+    height: 44,
+    borderRadius: 14,
+    borderWidth: 1.5,
     gap: Spacing.two,
-    marginTop: Spacing.one,
+    marginTop: 2,
   },
   searchInput: {
     flex: 1,
@@ -437,21 +496,57 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: Spacing.three,
-    borderRadius: 14,
+    borderRadius: 18,
     borderWidth: 1,
     marginBottom: Spacing.three,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 2,
+      },
+      web: {
+        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.04)',
+      },
+    }),
   },
   myCardAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: Spacing.three,
+    position: 'relative',
+    borderWidth: 2,
+  },
+  myCardOnlineDot: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 13,
+    height: 13,
+    borderRadius: 6.5,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
   },
   myCardInfo: {
     flex: 1,
-    gap: 2,
+    gap: 3,
+  },
+  nameBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  activeLinePill: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
   },
   favoritesSection: {
     marginBottom: Spacing.three,
@@ -463,18 +558,24 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.two,
   },
   favoritesScrollContent: {
-    gap: Spacing.three,
+    gap: 14,
     paddingVertical: Spacing.one,
+    paddingHorizontal: 2,
   },
   favCard: {
     alignItems: 'center',
-    width: 64,
-    gap: 4,
+    width: 66,
+    gap: 5,
+  },
+  favAvatarRing: {
+    padding: 2.5,
+    borderRadius: 30,
+    borderWidth: 1.5,
   },
   favAvatar: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
@@ -483,27 +584,40 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: -2,
     right: -2,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
+    width: 17,
+    height: 17,
+    borderRadius: 8.5,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1.5,
+    borderWidth: 2,
     borderColor: '#FFFFFF',
   },
   favName: {
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: '600',
     textAlign: 'center',
   },
+  allContactsHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: Spacing.two,
+    marginBottom: Spacing.two,
+  },
   sectionTitle: {
-    fontSize: 12,
-    letterSpacing: 0.8,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1,
     textTransform: 'uppercase',
+  },
+  sectionLine: {
+    flex: 1,
+    height: 1,
+    opacity: 0.6,
   },
   letterHeader: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '800',
     marginTop: Spacing.three,
     marginBottom: Spacing.one,
     paddingHorizontal: Spacing.one,
@@ -511,10 +625,25 @@ const styles = StyleSheet.create({
   contactRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: Spacing.three,
-    borderRadius: 14,
-    marginBottom: Spacing.two,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 16,
+    marginBottom: 8,
     borderWidth: 1,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.03,
+        shadowRadius: 6,
+      },
+      android: {
+        elevation: 1,
+      },
+      web: {
+        boxShadow: '0 2px 6px rgba(0, 0, 0, 0.02)',
+      },
+    }),
   },
   avatar: {
     width: 44,
@@ -523,14 +652,25 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: Spacing.three,
+    borderWidth: 1.5,
+  },
+  avatarText: {
+    fontSize: 15,
+    fontWeight: '700',
   },
   contactDetails: {
     flex: 1,
     gap: 2,
   },
   contactName: {
-    fontWeight: '600',
+    fontWeight: '700',
     fontSize: 16,
+    letterSpacing: -0.2,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   actionButton: {
     width: 38,
@@ -538,10 +678,7 @@ const styles = StyleSheet.create({
     borderRadius: 19,
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: Spacing.two,
-  },
-  pressed: {
-    opacity: 0.7,
+    borderWidth: 1,
   },
   emptyContainer: {
     alignItems: 'center',
@@ -549,14 +686,22 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.six,
     gap: Spacing.two,
   },
+  emptyIconCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: Spacing.two,
+  },
   emptyTitle: {
     fontSize: 20,
-    marginTop: Spacing.two,
+    fontWeight: '700',
   },
   emptySubtitle: {
     textAlign: 'center',
-    maxWidth: 280,
+    maxWidth: 290,
     fontSize: 14,
+    lineHeight: 20,
   },
 });
-

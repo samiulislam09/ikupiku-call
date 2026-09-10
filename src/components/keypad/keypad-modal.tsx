@@ -1,16 +1,21 @@
+import { useMemo } from 'react';
 import {
     Modal,
     Platform,
-    Pressable,
     StyleSheet,
     Text,
-    View,
+    View
 } from 'react-native';
+import Animated, {
+    FadeIn,
+    FadeInDown
+} from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { AppIcon } from '@/components/ui/app-icon';
+import { SpringPressable } from '@/components/ui/spring-pressable';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useKeypad } from '@/context/keypad-context';
 import { useTheme } from '@/hooks/use-theme';
@@ -43,6 +48,44 @@ const KEYPAD_KEYS: KeypadKeyConfig[][] = [
   ],
 ];
 
+function DialKey({
+  item,
+  onPress,
+  onLongPress,
+}: {
+  item: KeypadKeyConfig;
+  onPress: () => void;
+  onLongPress?: () => void;
+}) {
+  const theme = useTheme();
+
+  return (
+    <SpringPressable
+      onPress={onPress}
+      onLongPress={onLongPress}
+      delayLongPress={400}
+      scaleTo={0.91}
+      style={[
+        styles.keypadButton,
+        {
+          backgroundColor: theme.backgroundElement,
+          borderColor: theme.border,
+        },
+      ]}>
+      <Text style={[styles.keyDigit, { color: theme.text }]}>
+        {item.digit}
+      </Text>
+      {item.letters ? (
+        <Text style={[styles.keyLetters, { color: theme.textSecondary }]}>
+          {item.letters}
+        </Text>
+      ) : (
+        <View style={styles.letterSpacer} />
+      )}
+    </SpringPressable>
+  );
+}
+
 export function KeypadModal() {
   const {
     isKeypadVisible,
@@ -54,6 +97,22 @@ export function KeypadModal() {
   } = useKeypad();
   const theme = useTheme();
 
+  // Format dialed number with spaces
+  const formattedNumber = useMemo(() => {
+    if (!dialedNumber) return '';
+    const clean = dialedNumber.replace(/\s+/g, '');
+    if (clean.startsWith('+')) {
+      return clean.replace(/(\+\d{1,3})(\d{3})?(\d{3})?(\d+)?/, (m, p1, p2, p3, p4) => {
+        return [p1, p2, p3, p4].filter(Boolean).join(' ');
+      });
+    }
+    if (clean.length <= 3) return clean;
+    if (clean.length <= 6) return `${clean.slice(0, 3)} ${clean.slice(3)}`;
+    if (clean.length <= 10)
+      return `${clean.slice(0, 3)} ${clean.slice(3, 6)} ${clean.slice(6)}`;
+    return `${clean.slice(0, 3)} ${clean.slice(3, 6)} ${clean.slice(6, 10)} ${clean.slice(10)}`;
+  }, [dialedNumber]);
+
   return (
     <Modal
       visible={isKeypadVisible}
@@ -61,29 +120,48 @@ export function KeypadModal() {
       transparent={false}
       onRequestClose={closeKeypad}>
       <ThemedView style={styles.modalBackground}>
-        <SafeAreaView style={styles.safeArea}>
-          {/* Header Bar */}
+        <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={styles.safeArea}>
+          {/* Drag Handle Bar & Close */}
+          <View style={styles.topHandleBar}>
+            <View
+              style={[
+                styles.sheetDragPill,
+                { backgroundColor: theme.border },
+              ]}
+            />
+          </View>
+
           <View style={styles.headerBar}>
-            <Pressable
+            <SpringPressable
               onPress={closeKeypad}
               hitSlop={12}
-              style={({ pressed }) => [styles.headerButton, pressed && styles.pressed]}>
-              <AppIcon name="close" size={24} color={theme.textSecondary} />
-            </Pressable>
+              style={[styles.headerCircleBtn, { backgroundColor: theme.backgroundElement }]}>
+              <AppIcon name="close" size={20} color={theme.text} />
+            </SpringPressable>
 
             {dialedNumber.length > 0 ? (
-              <Pressable
-                onPress={() => {
-                  // Design only for now
-                }}
-                style={({ pressed }) => [styles.addContactButton, pressed && styles.pressed]}>
-                <ThemedText type="smallBold" style={{ color: theme.primary }}>
-                  + Add to Contacts
-                </ThemedText>
-              </Pressable>
+              <Animated.View entering={FadeIn.duration(200)}>
+                <SpringPressable
+                  onPress={() => {}}
+                  style={[
+                    styles.addContactPill,
+                    {
+                      backgroundColor: theme.primary + '18',
+                      borderColor: theme.primary + '30',
+                    },
+                  ]}>
+                  <AppIcon name="contacts" size={14} color={theme.primary} />
+                  <ThemedText type="smallBold" style={{ color: theme.primary }}>
+                    Add to Contacts
+                  </ThemedText>
+                </SpringPressable>
+              </Animated.View>
             ) : (
-              <ThemedText type="small" themeColor="textSecondary">
-                Keypad
+              <ThemedText
+                type="smallBold"
+                style={styles.keypadTitle}
+                themeColor="textSecondary">
+                KEYPAD
               </ThemedText>
             )}
 
@@ -95,15 +173,42 @@ export function KeypadModal() {
             <Text
               numberOfLines={1}
               adjustsFontSizeToFit
-              minimumFontScale={0.5}
+              minimumFontScale={0.45}
               style={[
                 styles.numberText,
                 {
                   color: theme.text,
                 },
               ]}>
-              {dialedNumber || ' '}
+              {formattedNumber || ' '}
             </Text>
+
+            {/* Quick Action Chips when number is typed */}
+            {dialedNumber.length > 0 && (
+              <Animated.View
+                entering={FadeInDown.duration(200)}
+                style={styles.quickChipsRow}>
+                <SpringPressable
+                  style={[
+                    styles.chip,
+                    { backgroundColor: theme.backgroundElement, borderColor: theme.border },
+                  ]}>
+                  <ThemedText type="small" themeColor="textSecondary">
+                    Audio Call
+                  </ThemedText>
+                </SpringPressable>
+
+                <SpringPressable
+                  style={[
+                    styles.chip,
+                    { backgroundColor: theme.backgroundElement, borderColor: theme.border },
+                  ]}>
+                  <ThemedText type="small" themeColor="textSecondary">
+                    Message
+                  </ThemedText>
+                </SpringPressable>
+              </Animated.View>
+            )}
           </View>
 
           {/* 3x4 Dialpad Grid */}
@@ -111,75 +216,60 @@ export function KeypadModal() {
             {KEYPAD_KEYS.map((row, rowIndex) => (
               <View key={`row-${rowIndex}`} style={styles.keypadRow}>
                 {row.map((item) => (
-                  <Pressable
+                  <DialKey
                     key={item.digit}
+                    item={item}
                     onPress={() => pressDigit(item.digit)}
                     onLongPress={() => {
                       if (item.digit === '0') {
                         pressDigit('+');
                       }
                     }}
-                    delayLongPress={400}
-                    style={({ pressed }) => [
-                      styles.keypadButton,
-                      {
-                        backgroundColor: pressed
-                          ? theme.backgroundSelected
-                          : theme.backgroundElement,
-                      },
-                    ]}>
-                    <Text style={[styles.keyDigit, { color: theme.text }]}>
-                      {item.digit}
-                    </Text>
-                    {item.letters ? (
-                      <Text style={[styles.keyLetters, { color: theme.textSecondary }]}>
-                        {item.letters}
-                      </Text>
-                    ) : (
-                      <View style={styles.letterSpacer} />
-                    )}
-                  </Pressable>
+                  />
                 ))}
               </View>
             ))}
           </View>
 
-          {/* Bottom Controls Bar */}
+          {/* Bottom Action Footer */}
           <View style={styles.bottomBar}>
-            {/* Left: Dismiss Dialpad */}
-            <Pressable
+            {/* Left: Close Keypad */}
+            <SpringPressable
               onPress={closeKeypad}
               hitSlop={12}
-              style={({ pressed }) => [styles.bottomSideButton, pressed && styles.pressed]}>
-              <AppIcon name="close" size={26} color={theme.textSecondary} />
-            </Pressable>
+              style={[
+                styles.bottomSideButton,
+                { backgroundColor: theme.backgroundElement },
+              ]}>
+              <AppIcon name="close" size={24} color={theme.textSecondary} />
+            </SpringPressable>
 
-            {/* Center: Green Call Button */}
-            <Pressable
-              onPress={() => {
-                // Calling functionality will be implemented later
-              }}
-              style={({ pressed }) => [
+            {/* Center: Glowing Green Call Button */}
+            <SpringPressable
+              scaleTo={0.92}
+              onPress={() => {}}
+              style={[
                 styles.callButton,
                 { backgroundColor: theme.callGreen },
-                pressed && styles.callButtonPressed,
               ]}>
               <AppIcon name="phone" size={32} color="#FFFFFF" />
-            </Pressable>
+            </SpringPressable>
 
-            {/* Right: Backspace / Clear Button */}
+            {/* Right: Backspace Button */}
             {dialedNumber.length > 0 ? (
-              <Pressable
-                onPress={deleteDigit}
-                onLongPress={clearNumber}
-                delayLongPress={350}
-                hitSlop={12}
-                style={({ pressed }) => [
-                  styles.bottomSideButton,
-                  pressed && styles.pressed,
-                ]}>
-                <AppIcon name="backspace" size={26} color={theme.textSecondary} />
-              </Pressable>
+              <Animated.View entering={FadeIn.duration(150)}>
+                <SpringPressable
+                  onPress={deleteDigit}
+                  onLongPress={clearNumber}
+                  delayLongPress={300}
+                  hitSlop={12}
+                  style={[
+                    styles.bottomSideButton,
+                    { backgroundColor: theme.backgroundElement },
+                  ]}>
+                  <AppIcon name="backspace" size={22} color={theme.text} />
+                </SpringPressable>
+              </Animated.View>
             ) : (
               <View style={styles.bottomSideButton} />
             )}
@@ -204,39 +294,71 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     width: '100%',
   },
+  topHandleBar: {
+    width: '100%',
+    alignItems: 'center',
+    paddingTop: Spacing.two,
+  },
+  sheetDragPill: {
+    width: 42,
+    height: 5,
+    borderRadius: 3,
+  },
   headerBar: {
     width: '100%',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: Spacing.two,
-    minHeight: 44,
+    minHeight: 48,
   },
-  headerButton: {
-    padding: Spacing.one,
-    borderRadius: Spacing.two,
+  headerCircleBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  addContactButton: {
-    paddingVertical: Spacing.one,
-    paddingHorizontal: Spacing.three,
-    borderRadius: Spacing.two,
+  addContactPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: 18,
+    borderWidth: 1,
+  },
+  keypadTitle: {
+    letterSpacing: 1.5,
+    fontSize: 12,
   },
   headerPlaceholder: {
-    width: 32,
+    width: 36,
   },
   displayArea: {
     width: '100%',
-    height: 70,
+    minHeight: 80,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: Spacing.four,
     marginBottom: Spacing.two,
+    gap: 8,
   },
   numberText: {
-    fontSize: 34,
-    fontWeight: '600',
-    letterSpacing: 2,
+    fontSize: 38,
+    fontWeight: '700',
+    letterSpacing: 1.5,
     textAlign: 'center',
+  },
+  quickChipsRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  chip: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
   },
   gridContainer: {
     width: '100%',
@@ -255,22 +377,33 @@ const styles = StyleSheet.create({
     borderRadius: 37,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
     ...Platform.select({
+      ios: {
+        shadowColor: '#000000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 2,
+      },
       web: {
         cursor: 'pointer',
         userSelect: 'none',
+        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)',
       },
     }),
   },
   keyDigit: {
-    fontSize: 28,
-    fontWeight: '500',
-    lineHeight: 32,
+    fontSize: 30,
+    fontWeight: '600',
+    lineHeight: 34,
   },
   keyLetters: {
-    fontSize: 9,
-    fontWeight: '600',
-    letterSpacing: 1.5,
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 2,
     marginTop: -1,
   },
   letterSpacer: {
@@ -286,11 +419,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.two,
   },
   bottomSideButton: {
-    width: 60,
-    height: 60,
+    width: 58,
+    height: 58,
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 30,
+    borderRadius: 29,
     ...Platform.select({
       web: {
         cursor: 'pointer',
@@ -298,33 +431,27 @@ const styles = StyleSheet.create({
     }),
   },
   callButton: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
     ...Platform.select({
       ios: {
-        shadowColor: '#16A34A',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.4,
-        shadowRadius: 10,
+        shadowColor: '#10B981',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.5,
+        shadowRadius: 14,
       },
       android: {
-        elevation: 6,
+        elevation: 8,
       },
       web: {
-        boxShadow: '0 4px 14px rgba(22, 163, 74, 0.4)',
+        boxShadow: '0 6px 22px rgba(16, 185, 129, 0.45)',
         cursor: 'pointer',
       },
     }),
   },
-  callButtonPressed: {
-    transform: [{ scale: 0.95 }],
-    opacity: 0.9,
-  },
-  pressed: {
-    opacity: 0.6,
-  },
 });
-
