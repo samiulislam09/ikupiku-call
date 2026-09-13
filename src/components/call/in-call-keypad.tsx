@@ -6,6 +6,7 @@ import { ThemedText } from '@/components/themed-text';
 import { AppIcon } from '@/components/ui/app-icon';
 import { SpringPressable } from '@/components/ui/spring-pressable';
 import { Spacing } from '@/constants/theme';
+import { useCall } from '@/context/call-context';
 import { useThemeContext } from '@/context/theme-context';
 
 interface KeypadKey {
@@ -34,10 +35,12 @@ interface InCallKeypadProps {
 
 export function InCallKeypad({ onClose }: InCallKeypadProps) {
   const { theme, isDark } = useThemeContext();
+  const { sendDtmf } = useCall();
   const [typedDigits, setTypedDigits] = useState('');
 
   const handlePress = (digit: string) => {
     setTypedDigits((prev) => prev + digit);
+    sendDtmf(digit);
   };
 
   return (

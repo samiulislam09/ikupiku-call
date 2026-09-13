@@ -1,14 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
-    Image,
-    Modal,
-    Platform,
-    Pressable,
-    Animated as RNAnimated,
-    ScrollView,
-    StyleSheet,
-    TextInput,
-    View,
+  Image,
+  Modal,
+  Platform,
+  Pressable,
+  Animated as RNAnimated,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  View,
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';

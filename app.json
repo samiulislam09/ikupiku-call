@@ -10,8 +10,14 @@
     "ios": {
       "icon": "./assets/expo.icon",
       "infoPlist": {
-        "UIBackgroundModes": ["voip", "audio", "remote-notification"]
-      }
+        "UIBackgroundModes": [
+          "voip",
+          "audio",
+          "remote-notification"
+        ],
+        "NSMicrophoneUsageDescription": "ilubilu needs the microphone for voice calls."
+      },
+      "bitcode": false
     },
     "android": {
       "adaptiveIcon": {
@@ -28,8 +34,22 @@
         "FOREGROUND_SERVICE_PHONE_CALL",
         "WAKE_LOCK",
         "VIBRATE",
-        "RECEIVE_BOOT_COMPLETED"
-      ]
+        "RECEIVE_BOOT_COMPLETED",
+        "RECORD_AUDIO",
+        "MODIFY_AUDIO_SETTINGS",
+        "BLUETOOTH_CONNECT",
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.CAMERA",
+        "android.permission.INTERNET",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.WAKE_LOCK",
+        "android.permission.BLUETOOTH",
+        "POST_NOTIFICATIONS"
+      ],
+      "package": "io.selorax.ilubilu",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "output": "static",
@@ -51,7 +71,11 @@
           "icon": "./assets/images/icon.png",
           "color": "#208AEF"
         }
-      ]
+      ],
+      "expo-secure-store",
+      "expo-build-properties",
+      "@config-plugins/react-native-webrtc",
+      "@react-native-firebase/app"
     ],
     "experiments": {
       "typedRoutes": true,

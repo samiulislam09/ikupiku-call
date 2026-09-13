@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { CallDetailsModal, type CallRecord } from '@/components/call-details/call-details-modal';
 import { SimulateCallModal } from '@/components/call/simulate-call-modal';
 import { FloatingKeypadButton } from '@/components/keypad/floating-keypad-button';
+import { LineStatusBanner } from '@/components/line-status-banner';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { AppIcon } from '@/components/ui/app-icon';
@@ -59,6 +60,7 @@ export default function CallLogsScreen() {
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeArea}>
+        <LineStatusBanner />
         {/* Screen Header */}
         <View style={styles.header}>
           <View style={styles.titleRow}>

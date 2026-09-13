@@ -41,6 +41,8 @@ export function CallingModal() {
     isOnHold,
     isInCallKeypadOpen,
     isMinimized,
+    lineReady,
+    lineError,
     acceptCall,
     declineCall,
     endCall,
@@ -50,6 +52,11 @@ export function CallingModal() {
     toggleKeypad,
     setIsMinimized,
   } = useCall();
+
+  // Minimal one-line line-status hint: the specific error when there is
+  // one, otherwise a quiet "still connecting" note while the softphone
+  // line isn't ready yet, otherwise nothing at all.
+  const lineStatusText = lineError ? lineError : !lineReady ? 'Line: connecting…' : null;
 
   // Pulse animation values for incoming radar rings
   const ring1Scale = useSharedValue(1);
@@ -326,6 +333,13 @@ export function CallingModal() {
               {caller.label ? `${caller.label} • ` : ''}
               {caller.number}
             </ThemedText>
+
+            {lineStatusText && (
+              <ThemedText
+                style={[styles.lineStatusText, { color: lineError ? theme.callRed : theme.textSecondary }]}>
+                {lineStatusText}
+              </ThemedText>
+            )}
 
             {/* Status / Live Duration Visualizer */}
             <View style={styles.statusRow}>
@@ -679,6 +693,13 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '500',
     marginBottom: Spacing.three,
+  },
+  lineStatusText: {
+    fontSize: 12,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginTop: -Spacing.two,
+    marginBottom: Spacing.two,
   },
   statusRow: {
     alignItems: 'center',

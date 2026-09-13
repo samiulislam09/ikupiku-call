@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useMemo, useState } from 'react';
 import {
     Image,
     Platform,
@@ -17,11 +18,19 @@ import { ThemedView } from '@/components/themed-view';
 import { AppIcon } from '@/components/ui/app-icon';
 import { SpringPressable } from '@/components/ui/spring-pressable';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
+import { useAuth } from '@/context/auth-context';
 import { useCall } from '@/context/call-context';
 import { ThemeMode, useThemeContext } from '@/context/theme-context';
 import { useUserProfile } from '@/context/user-profile-context';
 import { useTheme } from '@/hooks/use-theme';
 import { appStorage } from '@/utils/storage';
+
+function formatRemainingTime(totalSeconds: number): string {
+  const seconds = Math.max(0, Math.floor(totalSeconds));
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins}m ${secs}s`;
+}
 
 function parseDurationSeconds(dur?: string): number {
   if (!dur || dur === 'Canceled') return 0;
@@ -47,7 +56,25 @@ export default function ProfileScreen() {
   const { isDark, themeMode, setThemeMode } = useThemeContext();
   const { receiveIncomingCall, callLogs } = useCall();
   const { profile } = useUserProfile();
+  const { user, logout, refreshMe } = useAuth();
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      refreshMe();
+    }, [refreshMe])
+  );
+
+  const handleLogout = async () => {
+    if (isLoggingOut) return;
+    setIsLoggingOut(true);
+    try {
+      await logout();
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
 
   // Compute calling stats dynamically from call history
   const totalSeconds = useMemo(() => {
@@ -244,6 +271,100 @@ export default function ProfileScreen() {
               <ThemedText type="small" themeColor="textSecondary" style={styles.statLabel}>
                 Spam Blocked
               </ThemedText>
+            </View>
+          </Animated.View>
+
+          {/* Section: Account */}
+          <Animated.View
+            entering={FadeInDown.delay(60).springify()}
+            style={styles.section}>
+            <ThemedText
+              type="smallBold"
+              style={styles.sectionTitle}
+              themeColor="textSecondary">
+              ACCOUNT
+            </ThemedText>
+
+            <View
+              style={[
+                styles.groupCard,
+                { backgroundColor: theme.card, borderColor: theme.border },
+              ]}>
+              {/* Phone number */}
+              <View style={styles.rowItem}>
+                <View style={styles.rowLeft}>
+                  <View
+                    style={[
+                      styles.iconBox,
+                      { backgroundColor: theme.primary + '18' },
+                    ]}>
+                    <AppIcon name="profile" size={18} color={theme.primary} />
+                  </View>
+                  <View style={styles.rowTexts}>
+                    <ThemedText type="default" style={styles.rowTitle}>
+                      {user?.phone ?? 'Not signed in'}
+                    </ThemedText>
+                    <ThemedText type="small" themeColor="textSecondary">
+                      Signed-in account
+                    </ThemedText>
+                  </View>
+                </View>
+              </View>
+
+              <View style={[styles.divider, { backgroundColor: theme.border }]} />
+
+              {/* Free talk time */}
+              <View style={styles.rowItem}>
+                <View style={styles.rowLeft}>
+                  <View
+                    style={[
+                      styles.iconBox,
+                      { backgroundColor: theme.callGreen + '18' },
+                    ]}>
+                    <AppIcon name="clock" size={18} color={theme.callGreen} />
+                  </View>
+                  <View style={styles.rowTexts}>
+                    <ThemedText type="default" style={styles.rowTitle}>
+                      Free talk time
+                    </ThemedText>
+                    <ThemedText type="small" themeColor="textSecondary">
+                      Remaining balance for PSTN calls
+                    </ThemedText>
+                  </View>
+                </View>
+                <ThemedText type="smallBold" style={{ color: theme.callGreen }}>
+                  {formatRemainingTime(user?.remainingSeconds ?? 0)}
+                </ThemedText>
+              </View>
+
+              <View style={[styles.divider, { backgroundColor: theme.border }]} />
+
+              {/* Log out */}
+              <SpringPressable
+                scaleTo={0.98}
+                onPress={handleLogout}
+                disabled={isLoggingOut}
+                style={[styles.rowItem, { opacity: isLoggingOut ? 0.6 : 1 }]}>
+                <View style={styles.rowLeft}>
+                  <View
+                    style={[
+                      styles.iconBox,
+                      { backgroundColor: theme.callRed + '18' },
+                    ]}>
+                    <AppIcon name="phone-down" size={18} color={theme.callRed} />
+                  </View>
+                  <View style={styles.rowTexts}>
+                    <ThemedText
+                      type="default"
+                      style={[styles.rowTitle, { color: theme.callRed }]}>
+                      Log out
+                    </ThemedText>
+                    <ThemedText type="small" themeColor="textSecondary">
+                      Sign out of your ilubilu account
+                    </ThemedText>
+                  </View>
+                </View>
+              </SpringPressable>
             </View>
           </Animated.View>
 

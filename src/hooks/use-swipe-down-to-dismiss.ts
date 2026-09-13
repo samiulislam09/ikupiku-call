@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-    Animated,
-    Dimensions,
-    GestureResponderEvent,
-    NativeScrollEvent,
-    NativeSyntheticEvent,
-    PanResponder,
-    Platform,
+  Animated,
+  Dimensions,
+  GestureResponderEvent,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
+  PanResponder,
+  Platform,
 } from 'react-native';
 
 interface UseSwipeDownToDismissOptions {

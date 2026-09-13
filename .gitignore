@@ -18,6 +18,10 @@ expo-env.d.ts
 *.key
 *.mobileprovision
 
+# Firebase — per-machine, fetched from the Firebase console (see
+# docs/RUNNING-CALLS.md §6); not checked in.
+google-services.json
+
 # Metro
 .metro-health-check*
 
@@ -31,6 +35,7 @@ yarn-error.*
 *.pem
 
 # local env files
+.env
 .env*.local
 
 # typescript

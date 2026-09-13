@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useMemo, useState } from 'react';
 import {
     FlatList,
     Image,
@@ -22,7 +23,65 @@ import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useCall } from '@/context/call-context';
 import { useUserProfile } from '@/context/user-profile-context';
 import { useTheme } from '@/hooks/use-theme';
+import { resolveAppContacts } from '@/services/api';
 import { appStorage } from '@/utils/storage';
+
+// Caches which of this device's contacts are other ilubilu app users, so the
+// "Free" badge (see AppContactBadge below) can render instantly on the next
+// launch instead of waiting on a network round trip. Refreshed silently in
+// the background on screen focus and after contact edits; a failed refresh
+// (offline, server error) just keeps whatever this cache already holds.
+const APP_CONTACTS_STORAGE_KEY = 'ilubilu_app_contacts';
+
+// The server only ever resolves BD phone numbers (see xcall's
+// normalizeBdPhone) — mirrored here, byte-for-byte, so a contact's phone
+// number normalizes to EXACTLY the same E.164 string the server returns in
+// `appUserPhones`, letting a plain Set membership check do the matching.
+// Numbers that aren't valid BD numbers (e.g. this screen's US-formatted
+// MOCK_CONTACTS) simply never match — expected, not a bug.
+function normalizeBdPhone(input: string): string | null {
+  const raw = input.trim().replace(/[\s\-()]/g, '');
+  if (!raw) return null;
+
+  let digits = raw.startsWith('+') ? raw.slice(1) : raw;
+  digits = digits.replace(/\D/g, '');
+
+  if (digits.startsWith('880') && digits.length === 13) {
+    return `+${digits}`;
+  }
+  if (digits.startsWith('0') && digits.length === 11 && digits[1] === '1') {
+    return `+880${digits.slice(1)}`;
+  }
+  if (digits.startsWith('1') && digits.length === 10) {
+    return `+880${digits}`;
+  }
+
+  return null;
+}
+
+// Resolves which of the given contacts are other app users, chunking the
+// request to at most 200 phones per call (the server rejects longer
+// arrays). Returns the matched, normalized E.164 phones as a plain array —
+// callers turn it into a Set.
+async function fetchAppContactPhones(contactsList: Contact[]): Promise<string[]> {
+  const CHUNK_SIZE = 200;
+  const normalized = Array.from(
+    new Set(
+      contactsList
+        .map((c) => normalizeBdPhone(c.phone))
+        .filter((phone): phone is string => phone !== null)
+    )
+  );
+  if (normalized.length === 0) return [];
+
+  const matched = new Set<string>();
+  for (let i = 0; i < normalized.length; i += CHUNK_SIZE) {
+    const chunk = normalized.slice(i, i + CHUNK_SIZE);
+    const result = await resolveAppContacts(chunk);
+    for (const phone of result) matched.add(phone);
+  }
+  return Array.from(matched);
+}
 
 const MOCK_CONTACTS: Contact[] = [
   {
@@ -137,16 +196,56 @@ export default function ContactsScreen() {
   );
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
 
+  // Normalized phones (see normalizeBdPhone above) of contacts that are
+  // other ilubilu app users — seeded from the cache for an instant first
+  // render, then kept fresh by the focus effect and handleSaveContact below.
+  const [appContactPhones, setAppContactPhones] = useState<Set<string>>(
+    () => new Set(appStorage.getJSON<string[]>(APP_CONTACTS_STORAGE_KEY, []))
+  );
+
+  const refreshAppContacts = useCallback(async (contactsList: Contact[]) => {
+    try {
+      const matched = await fetchAppContactPhones(contactsList);
+      setAppContactPhones(new Set(matched));
+      appStorage.setJSON(APP_CONTACTS_STORAGE_KEY, matched);
+    } catch {
+      // Offline / server error — silently keep whatever the cache (seeded
+      // above, or a prior successful refresh) already holds rather than
+      // wiping badges over a transient failure.
+    }
+  }, []);
+
+  // Background refresh on every screen focus (tab switch back into
+  // Contacts) — the cached Set above already rendered synchronously, this
+  // just keeps it current.
+  useFocusEffect(
+    useCallback(() => {
+      refreshAppContacts(contacts);
+    }, [refreshAppContacts, contacts])
+  );
+
+  const isAppContact = useCallback(
+    (phone: string) => {
+      const normalized = normalizeBdPhone(phone);
+      return normalized !== null && appContactPhones.has(normalized);
+    },
+    [appContactPhones]
+  );
+
   const handleSaveContact = (updated: Contact) => {
-    setContacts((prev) => {
-      const exists = prev.some((c) => c.id === updated.id);
-      const next = exists
-        ? prev.map((c) => (c.id === updated.id ? updated : c))
-        : [updated, ...prev];
-      appStorage.setJSON('ilubilu_contacts', next);
-      return next;
-    });
+    const exists = contacts.some((c) => c.id === updated.id);
+    const next = exists
+      ? contacts.map((c) => (c.id === updated.id ? updated : c))
+      : [updated, ...contacts];
+    appStorage.setJSON('ilubilu_contacts', next);
+    setContacts(next);
     setSelectedContact(updated);
+    // Re-resolve in the background after an edit (e.g. a phone number
+    // change) so a newly-matching contact's badge shows up without waiting
+    // for the next screen focus. Called with the freshly-computed array,
+    // outside the setState updater (updaters must stay pure — no side
+    // effects like a network fetch belong inside one).
+    refreshAppContacts(next);
   };
 
   const handleDeleteContact = (id: string) => {
@@ -438,9 +537,24 @@ export default function ContactsScreen() {
 
                   {/* Contact Info */}
                   <View style={styles.contactDetails}>
-                    <ThemedText type="default" style={styles.contactName}>
-                      {item.name}
-                    </ThemedText>
+                    <View style={styles.contactNameRow}>
+                      <ThemedText type="default" style={styles.contactName}>
+                        {item.name}
+                      </ThemedText>
+                      {isAppContact(item.phone) && (
+                        <View
+                          style={[
+                            styles.freeBadge,
+                            { backgroundColor: theme.callGreen + '18' },
+                          ]}>
+                          <ThemedText
+                            type="smallBold"
+                            style={{ color: theme.callGreen, fontSize: 9 }}>
+                            FREE
+                          </ThemedText>
+                        </View>
+                      )}
+                    </View>
                     <ThemedText type="small" themeColor="textSecondary">
                       {item.label} • {item.phone}
                     </ThemedText>
@@ -761,10 +875,20 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 2,
   },
+  contactNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   contactName: {
     fontWeight: '700',
     fontSize: 16,
     letterSpacing: -0.2,
+  },
+  freeBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
   },
   actionRow: {
     flexDirection: 'row',
